@@ -65,7 +65,8 @@ function drawNode(node, ctx, globalScale, selectedId) {
 
   // Label
   if (globalScale >= 0.7) {
-    const label = node.name?.length > 14 ? node.name.slice(0, 13) + '…' : node.name;
+    const displayName = node.label || node.name || node.id || 'Unknown';
+    const label = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
     ctx.font = `${Math.max(4, 6 / globalScale)}px Inter`;
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.textAlign = 'center';
