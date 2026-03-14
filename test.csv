@@ -1,0 +1,2 @@
+id,fromAccountId,toAccountId,amount,currency,txnDate,txnType,description,referenceNumber,isSuspicious,flagLevel,flagReasons
+ft001,fa001,fa002,500000.00,USD,2025-01-01,wire,Investment capital transfer,REF-FT-001,false,NONE,

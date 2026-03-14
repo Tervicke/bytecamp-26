@@ -1,0 +1,68 @@
+id,fromAccountId,toAccountId,amount,currency,txnDate,txnType,description,referenceNumber,isSuspicious,flagLevel,flagReasons
+ft001,fa001,fa002,500000.00,USD,2025-01-01,wire,Investment capital transfer,REF-FT-001,false,NONE,
+ft002,fa002,fa003,490000.00,USD,2025-01-03,wire,Consulting payment chain,REF-FT-002,false,NONE,
+ft003,fa003,fa001,480000.00,USD,2025-01-05,wire,Management reimbursement,REF-FT-003,false,NONE,
+
+ft004,fa010,fa011,120000.00,USD,2025-01-10,wire,Intercompany settlement,REF-FT-004,false,NONE,
+ft005,fa010,fa011,118000.00,USD,2025-01-11,wire,Intercompany settlement,REF-FT-005,false,NONE,
+ft006,fa010,fa011,119500.00,USD,2025-01-12,wire,Intercompany settlement,REF-FT-006,false,NONE,
+ft007,fa010,fa011,117000.00,USD,2025-01-13,wire,Intercompany settlement,REF-FT-007,false,NONE,
+ft008,fa010,fa011,121000.00,USD,2025-01-14,wire,Intercompany settlement,REF-FT-008,false,NONE,
+
+ft009,fa020,fa021,9800.00,USD,2025-02-01,cash,Cash deposit retail sales,REF-FT-009,false,NONE,
+ft010,fa020,fa021,9700.00,USD,2025-02-02,cash,Cash deposit retail sales,REF-FT-010,false,NONE,
+ft011,fa020,fa021,9600.00,USD,2025-02-03,cash,Cash deposit retail sales,REF-FT-011,false,NONE,
+ft012,fa020,fa021,9900.00,USD,2025-02-04,cash,Cash deposit retail sales,REF-FT-012,false,NONE,
+ft013,fa020,fa021,9500.00,USD,2025-02-05,cash,Cash deposit retail sales,REF-FT-013,false,NONE,
+ft014,fa020,fa021,9400.00,USD,2025-02-06,cash,Cash deposit retail sales,REF-FT-014,false,NONE,
+
+ft015,fa030,fa031,300000.00,USD,2025-03-01,wire,Trade financing payment,REF-FT-015,false,NONE,
+ft016,fa031,fa032,295000.00,USD,2025-03-03,wire,Supply chain transfer,REF-FT-016,false,NONE,
+ft017,fa032,fa033,290000.00,USD,2025-03-05,wire,Vendor settlement,REF-FT-017,false,NONE,
+ft018,fa033,fa034,285000.00,USD,2025-03-07,wire,Distribution transfer,REF-FT-018,false,NONE,
+ft019,fa034,fa030,280000.00,USD,2025-03-09,wire,Trade cycle closure,REF-FT-019,false,NONE,
+
+ft020,fa040,fa041,700000.00,USD,2025-04-01,wire,Offshore investment allocation,REF-FT-020,false,NONE,
+ft021,fa041,fa042,690000.00,USD,2025-04-04,wire,Portfolio transfer,REF-FT-021,false,NONE,
+ft022,fa042,fa043,680000.00,USD,2025-04-06,wire,Private equity payment,REF-FT-022,false,NONE,
+ft023,fa043,fa040,670000.00,USD,2025-04-09,wire,Capital return transfer,REF-FT-023,false,NONE,
+
+ft024,fa050,fa051,200000.00,USD,2025-05-01,wire,Joint venture funding,REF-FT-024,false,NONE,
+ft025,fa051,fa052,198000.00,USD,2025-05-03,wire,Subsidiary transfer,REF-FT-025,false,NONE,
+ft026,fa052,fa053,195000.00,USD,2025-05-05,wire,Vendor settlement,REF-FT-026,false,NONE,
+ft027,fa053,fa050,193000.00,USD,2025-05-07,wire,Capital redistribution,REF-FT-027,false,NONE,
+
+ft028,fa060,fa061,150000.00,USD,2025-06-01,wire,Logistics contract payment,REF-FT-028,false,NONE,
+ft029,fa061,fa062,148000.00,USD,2025-06-03,wire,Freight handling fee,REF-FT-029,false,NONE,
+ft030,fa062,fa063,145000.00,USD,2025-06-05,wire,Port services payment,REF-FT-030,false,NONE,
+ft031,fa063,fa060,142000.00,USD,2025-06-07,wire,Operational settlement,REF-FT-031,false,NONE,
+
+ft032,fa070,fa071,9900.00,USD,2025-07-01,cash,Small business deposit,REF-FT-032,false,NONE,
+ft033,fa070,fa071,9800.00,USD,2025-07-02,cash,Small business deposit,REF-FT-033,false,NONE,
+ft034,fa070,fa071,9750.00,USD,2025-07-03,cash,Small business deposit,REF-FT-034,false,NONE,
+ft035,fa070,fa071,9650.00,USD,2025-07-04,cash,Small business deposit,REF-FT-035,false,NONE,
+ft036,fa070,fa071,9550.00,USD,2025-07-05,cash,Small business deposit,REF-FT-036,false,NONE,
+
+ft037,fa080,fa081,450000.00,USD,2025-08-01,wire,Corporate investment transfer,REF-FT-037,false,NONE,
+ft038,fa081,fa082,440000.00,USD,2025-08-03,wire,Strategic partnership funding,REF-FT-038,false,NONE,
+ft039,fa082,fa083,430000.00,USD,2025-08-05,wire,Operational expansion funds,REF-FT-039,false,NONE,
+ft040,fa083,fa080,420000.00,USD,2025-08-07,wire,Capital redistribution,REF-FT-040,false,NONE,
+
+ft041,fa090,fa091,1000000.00,USD,2025-09-01,wire,Private equity investment,REF-FT-041,false,NONE,
+ft042,fa091,fa092,990000.00,USD,2025-09-03,wire,Fund allocation transfer,REF-FT-042,false,NONE,
+ft043,fa092,fa093,980000.00,USD,2025-09-05,wire,Infrastructure payment,REF-FT-043,false,NONE,
+ft044,fa093,fa090,970000.00,USD,2025-09-07,wire,Capital return flow,REF-FT-044,false,NONE,
+
+ft045,fa100,fa101,250000.00,USD,2025-10-01,wire,Investment holding transfer,REF-FT-045,false,NONE,
+ft046,fa101,fa102,245000.00,USD,2025-10-03,wire,Subsidiary capital transfer,REF-FT-046,false,NONE,
+ft047,fa102,fa103,240000.00,USD,2025-10-05,wire,Service payment chain,REF-FT-047,false,NONE,
+ft048,fa103,fa100,235000.00,USD,2025-10-07,wire,Capital restructuring payment,REF-FT-048,false,NONE,
+
+ft049,fa110,fa111,9800.00,USD,2025-11-01,cash,Structured deposit attempt,REF-FT-049,false,NONE,
+ft050,fa110,fa111,9700.00,USD,2025-11-02,cash,Structured deposit attempt,REF-FT-050,false,NONE,
+ft051,fa110,fa111,9600.00,USD,2025-11-03,cash,Structured deposit attempt,REF-FT-051,false,NONE,
+ft052,fa110,fa111,9500.00,USD,2025-11-04,cash,Structured deposit attempt,REF-FT-052,false,NONE,
+ft053,fa110,fa111,9400.00,USD,2025-11-05,cash,Structured deposit attempt,REF-FT-053,false,NONE,
+
+ft054,fa120,fa121,600000.00,USD,2025-12-01,wire,Offshore entity capital transfer,REF-FT-054,false,NONE,
+ft055,fa121,fa120,590000.00,USD,2025-12-03,wire,Return capital flow same owner,REF-FT-055,false,NONE
