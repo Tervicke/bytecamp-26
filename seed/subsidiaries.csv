@@ -1,0 +1,14 @@
+parentCompanyId,subsidiaryCompanyId,sharesPct,effectiveDate,relationshipType,notes
+c002,c001,100.00,2019-06-01,wholly_owned,Alpine Ventures fully controls Meridian Trading
+c002,c003,100.00,2019-02-01,wholly_owned,Alpine Ventures fully controls Solaris Holdings
+c001,c008,100.00,2021-09-01,wholly_owned,Meridian acquired Harborview Capital
+c001,c017,100.00,2023-04-01,wholly_owned,Meridian spun off Phantom Equity
+c005,c014,60.00,2019-01-15,majority_controlled,Nexus has controlling interest in Crescent Moon
+c005,c011,100.00,2020-01-01,wholly_owned,Nexus acquired Coral Bay Properties
+c014,c012,100.00,2022-03-01,wholly_owned,Crescent Moon controls Amber Creek Finance
+c019,c012,0.00,2022-03-01,under_investigation,Black Pebble may share control of Amber Creek
+c007,c003,0.00,2018-05-01,under_investigation,Hidden link between Ironclad and Solaris suspected
+c016,c026,0.00,2022-01-01,associated,Zenith and Alpine share beneficial owners
+c013,c015,15.00,2021-08-01,minority_stake,NorthStar has small stake in Triton
+c006,c002,0.00,2017-09-01,affiliated,BlueStar and Alpine share directors
+c009,c020,25.00,2020-11-15,minority_stake,Quantum Pharma invested in Greenway Agri

@@ -1,0 +1,27 @@
+personId,companyId,ownershipPct,effectiveDate,ownershipType,notes
+p001,c001,100.00,2019-03-15,beneficial_owner,Sole UBO via nominee arrangement
+p001,c008,75.00,2021-07-01,beneficial_owner,Controlling stake
+p001,c012,100.00,2022-01-18,beneficial_owner,Wholly owned by Rennov
+p002,c004,60.00,2018-06-30,beneficial_owner,Majority owner
+p002,c010,35.00,2014-12-01,shareholder,Significant minority stake
+p003,c003,100.00,2018-01-10,nominee_shareholder,Nominee for undisclosed UBO
+p004,c005,100.00,2020-02-14,nominee_shareholder,Nominee for undisclosed UBO
+p005,c006,45.00,2015-11-05,shareholder,Joint owner with Vandermeer
+p005,c014,100.00,2018-11-30,beneficial_owner,Sole UBO
+p005,c019,80.00,2021-09-15,beneficial_owner,Controlling stake
+p006,c006,55.00,2015-11-05,shareholder,Joint owner with Al-Rashidi
+p006,c002,100.00,2017-08-22,beneficial_owner,Sole UBO Alpine Ventures
+p007,c004,40.00,2018-06-30,shareholder,Minority stake
+p007,c015,70.00,2015-05-15,beneficial_owner,Founder and owner
+p008,c007,100.00,2016-04-20,nominee_shareholder,Nominee for undisclosed UBO
+p009,c016,100.00,2016-07-22,beneficial_owner,Sole UBO Zenith
+p009,c017,100.00,2023-02-10,beneficial_owner,Sole UBO Phantom Equity
+p010,c009,25.00,2020-09-12,shareholder,Minority investor
+p011,c007,0.00,2016-04-20,beneficial_owner,Hidden UBO obscured by Petrov nominee
+p011,c003,0.00,2018-01-10,beneficial_owner,Hidden UBO obscured by Marchetti nominee
+p011,c011,100.00,2017-03-28,beneficial_owner,Sole UBO Coral Bay
+p012,c018,50.00,2020-04-01,shareholder,Joint owner
+p013,c013,100.00,2019-10-05,nominee_shareholder,Nominee for tech founders
+p014,c018,50.00,2020-04-01,shareholder,Joint owner with Layla Hussain
+p015,c020,85.00,2017-12-20,beneficial_owner,Controlling owner Greenway
+p015,c019,20.00,2021-09-15,shareholder,Minority stake in Black Pebble
