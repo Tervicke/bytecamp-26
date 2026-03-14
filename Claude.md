@@ -108,21 +108,18 @@ A node's flag level is always the **maximum** of all reasons it has been flagged
 
 | Label | Key Properties |
 |-------|---------------|
-| `Company` | id, name, jurisdiction, registrationNumber, incorporatedDate, flagLevel, flagReasons[] |
-| `Person` | id, name, nationality, dob, role, flagLevel, flagReasons[] |
-| `BankAccount` | id, accountNumber, bankName, currency, balance, cashFlowRatio, txnCount30d, flagLevel |
-| `Transaction` | id, amount, currency, txnDate, txnType, description, isSuspicious, flagLevel |
+| `Company` | id, name, jurisdiction, registrationNumber, incorporatedDate, companyType, industry, address, isShell, flagLevel, flagReasons[] |
+| `Person` | id, name, nationality, dob, passportNumber, email, phone, role, flagLevel, flagReasons[] |
+| `BankAccount` | id, accountNumber, bankName, bankCountry, currency, balance, openedDate, accountType, swiftCode, flagLevel |
 
 ### Relationship Types
 
 | Relationship | From → To | Properties |
 |-------------|-----------|------------|
-| `OWNS` | Person → Company | ownershipPct, effectiveDate |
-| `CONTROLS` | Person → Company | role (director/beneficiary) |
-| `HOLDS_ACCOUNT` | Company → BankAccount | since |
-| `TRANSFERS_TO` | BankAccount → BankAccount | via Transaction node |
-| `SUBSIDIARY_OF` | Company → Company | sharesPct |
-| `WORKS_FOR` | Person → Company | title |
+| `OWNS` | Person → Company | ownershipPct, effectiveDate, ownershipType, notes |
+| `HOLDS_ACCOUNT` | Company → BankAccount | since, accountType |
+| `TRANSFERS_TO` | BankAccount → BankAccount | **id**, amount, currency, txnDate, txnType, description, referenceNumber, isSuspicious, flagLevel, flagReasons[] |
+| `SUBSIDIARY_OF` | Company → Company | sharesPct, effectiveDate, relationshipType, notes |
 
 ### Example Cypher — Cycle Detection
 ```cypher
@@ -133,12 +130,12 @@ RETURN path
 
 ### Example Cypher — Flag Propagation
 ```cypher
-MATCH (flagged:Company {id: $companyId})-[*1..3]-(neighbor)
-WITH neighbor, length(path) AS layer
+MATCH path = (flagged:Company {id: $companyId})-[*1..3]-(neighbor)
+WITH neighbor, min(length(path)) AS hops
 SET neighbor.flagLevel = CASE
-  WHEN layer = 1 THEN 'HIGH'
-  WHEN layer = 2 THEN 'MEDIUM'
-  WHEN layer = 3 THEN 'LOW'
+  WHEN hops = 1 THEN 'HIGH'
+  WHEN hops = 2 THEN 'MEDIUM'
+  WHEN hops = 3 THEN 'LOW'
   ELSE neighbor.flagLevel
 END
 ```
@@ -150,7 +147,7 @@ END
 ```
 bytecamp-26/
 ├── Claude.md                    # This file
-├── data/                        # Seed CSVs
+├── seed/                        # Seed CSVs
 │   ├── companies.csv
 │   ├── persons.csv
 │   ├── bank_accounts.csv
@@ -185,8 +182,6 @@ bytecamp-26/
 │   │   │   └── validate.ts
 │   │   └── types/
 │   │       └── index.ts
-│   ├── prisma/
-│   │   └── schema.prisma
 │   ├── package.json
 │   └── tsconfig.json
 ├── frontend/
@@ -213,7 +208,7 @@ bytecamp-26/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tailwind.config.ts
-└── docker-compose.yml           # Neo4j + Postgres
+└── docker-compose.yml           # Neo4j
 ```
 
 ---
@@ -250,50 +245,6 @@ bytecamp-26/
 | POST | `/api/flags/run-analysis` | Manually trigger full analysis pipeline |
 | PATCH | `/api/flags/:entityId` | Override flag level (admin) |
 
----
-
-## Prisma Schema (PostgreSQL — Audit Ledger)
-
-```prisma
-// Transaction ledger — source of truth for financial data
-model Transaction {
-  id              String    @id @default(uuid())
-  fromAccountId   String
-  toAccountId     String
-  amount          Decimal   @db.Decimal(19,4)
-  currency        String    @default("USD")
-  txnDate         DateTime
-  txnType         String    // wire, cash, ach, crypto
-  description     String?
-  isSuspicious    Boolean   @default(false)
-  flagLevel       String    @default("NONE") // NONE, LOW, MEDIUM, HIGH, CRITICAL
-  flagReasons     String[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model FlagEvent {
-  id          String    @id @default(uuid())
-  entityId    String    // Neo4j node id
-  entityType  String    // Company, Person, BankAccount, Transaction
-  flagLevel   String
-  reason      String
-  triggeredBy String    // algorithm name
-  resolvedAt  DateTime?
-  createdAt   DateTime  @default(now())
-}
-
-model AnalysisRun {
-  id              String    @id @default(uuid())
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
-  cyclesFound     Int       @default(0)
-  entitiesFlagged Int       @default(0)
-  status          String    // running, completed, failed
-}
-```
-
----
 
 ## Detection Algorithms
 
@@ -499,7 +450,7 @@ interface GraphData {
 
 ## Success Criteria (24h Hackathon)
 
-- [ ] Neo4j + Postgres running, entity graph seeded from CSVs
+- [ ] Neo4j running, entity graph seeded from CSVs
 - [ ] Transaction ingestion triggers automated analysis pipeline
 - [ ] Cycle detection finds and flags circular fund flows
 - [ ] High-volume bank account detection working
