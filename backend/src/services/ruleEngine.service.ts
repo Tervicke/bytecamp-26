@@ -29,7 +29,7 @@ export type ApplyRulesResult = {
 const ALL_RULES: TransactionRule[] = [
   circularTransactionRule,
   sharedOwnershipRule,
-  rapidTransfersRule,
+  // rapidTransfersRule,
   cashFlowRatioRule,
 ];
 
@@ -74,6 +74,52 @@ export async function evaluateAllTransactionRules(
   return results;
 }
 
+
+async function flagAccountsForTransaction(txn: Transaction & {
+  isSuspicious: boolean
+  flagLevel: string
+  flagReasons: string[]
+}) {
+  if (!txn.isSuspicious) return;
+
+  const query = `
+    MATCH (a:BankAccount {id: $fromId}),
+          (b:BankAccount {id: $toId})
+          
+    // 1. Flag the immediate Bank Accounts
+    SET a.flagLevel = $flagLevel,
+        b.flagLevel = $flagLevel,
+        a.flagReasons = apoc.coll.toSet(coalesce(a.flagReasons, []) + $flagReasons),
+        b.flagReasons = apoc.coll.toSet(coalesce(b.flagReasons, []) + $flagReasons)
+
+    // 2. Propagation for "From" side (Company & Owner)
+    WITH a, b
+    OPTIONAL MATCH (ca:Company)-[:HOLDS_ACCOUNT]->(a)
+    OPTIONAL MATCH (pa:Person)-[:OWNS]->(ca)
+    SET ca.flagLevel = $flagLevel,
+        ca.flagReasons = apoc.coll.toSet(coalesce(ca.flagReasons, []) + $flagReasons),
+        pa.flagLevel = $flagLevel,
+        pa.flagReasons = apoc.coll.toSet(coalesce(pa.flagReasons, []) + $flagReasons)
+
+    // 3. Propagation for "To" side (Company & Owner)
+    WITH b
+    OPTIONAL MATCH (cb:Company)-[:HOLDS_ACCOUNT]->(b)
+    OPTIONAL MATCH (pb:Person)-[:OWNS]->(cb)
+    SET cb.flagLevel = $flagLevel,
+        cb.flagReasons = apoc.coll.toSet(coalesce(cb.flagReasons, []) + $flagReasons),
+        pb.flagLevel = $flagLevel,
+        pb.flagReasons = apoc.coll.toSet(coalesce(pb.flagReasons, []) + $flagReasons)
+  `;
+
+  await runWrite(query, {
+    fromId: txn.fromAccountId,
+    toId: txn.toAccountId,
+    flagLevel: txn.flagLevel,
+    flagReasons: txn.flagReasons
+  });
+}
+
+
 export async function applyAllRulesToTransaction(
   txn: Transaction
 ): Promise<ApplyRulesResult> {
@@ -91,16 +137,22 @@ export async function applyAllRulesToTransaction(
   const isSuspicious = maxSeverity > 0;
   const flagLevel = FlagLevelMap[maxSeverity] ?? "NONE";
 
+  const flaggedTxn = {
+    ...txn,
+    isSuspicious,
+    flagReasons: triggeredNames,
+    severity: maxSeverity,
+    flagLevel,
+  };
+
+  // propagate risk to accounts
+  await flagAccountsForTransaction(flaggedTxn);
+
   return {
-    transaction: {
-      ...txn,
-      isSuspicious,
-      flagReasons: triggeredNames,
-      severity: maxSeverity,
-      flagLevel,
-    },
+    transaction: flaggedTxn,
     ruleResults,
   };
+
 }
 
 // ─── Severity Helpers ────────────────────────────────────────────────────
