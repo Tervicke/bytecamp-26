@@ -21,7 +21,7 @@ import { join } from 'path';
 import { parse } from 'csv-parse/sync';
 import { readFileSync } from 'fs';
 import { connectNeo4j, closeNeo4j, runWrite } from '../lib/neo4j.ts';
-import { applySchema } from '../lib/schema.ts';
+import { applySchema } from '../lib/neo4j/schema.ts';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
