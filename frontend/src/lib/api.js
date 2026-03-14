@@ -188,7 +188,7 @@ export const MOCK_VOLUME_CHART = Array.from({ length: 14 }, (_, i) => {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 // By default, if the env variable isn't explicitly 'false', we use the mock data.
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false';
+const USE_MOCK = false;
 
 /**
  * Universal fetch wrapper for the real backend
@@ -225,18 +225,6 @@ async function fetchApi(endpoint, options = {}) {
 
 export const api = {
   async getDashboardStats() {
-    if (USE_MOCK) {
-      await delay();
-      return {
-        totalTransactions: MOCK_TRANSACTIONS.length,
-        flaggedTransactions: MOCK_TRANSACTIONS.filter(t => t.flagLevel !== 'NONE').length,
-        criticalAlerts: MOCK_TRANSACTIONS.filter(t => t.flagLevel === 'CRITICAL').length,
-        activeCycles: 2,
-        entitiesFlagged: 16,
-        analysisRuns: MOCK_ANALYSIS_RUNS.length,
-        lastAnalysis: MOCK_ANALYSIS_RUNS[0].completedAt,
-      };
-    }
     return fetchApi('/dashboard/stats');
   },
 
@@ -349,59 +337,50 @@ export const api = {
   },
 
   async getFullGraph() {
-    if (USE_MOCK) {
-       await delay(800);
-       return MOCK_GRAPH_DATA;
-    }
     return fetchApi('/graph');
   },
 
   async getCompanies() { 
-    if (USE_MOCK) { await delay(); return MOCK_COMPANIES; }
-    return fetchApi('/entities/companies'); // Example endpoint mapping
+    return fetchApi('/entities/companies');
   },
   
   async getPersons() { 
-    if (USE_MOCK) { await delay(); return MOCK_PERSONS; }
     return fetchApi('/entities/persons'); 
   },
   
   async getBankAccounts() { 
-    if (USE_MOCK) { await delay(); return MOCK_BANK_ACCOUNTS; }
     return fetchApi('/entities/accounts'); 
   },
   
   async getEntity(id) {
-    if (USE_MOCK) {
-      await delay(400);
-      return MOCK_COMPANIES.find(c => c.id === id) || MOCK_PERSONS.find(p => p.id === id) || MOCK_BANK_ACCOUNTS.find(b => b.id === id) || null;
-    }
     return fetchApi(`/entities/${id}`);
   },
 
+  async createCompany(data) {
+    return fetchApi('/entities/companies', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async createBankAccount(data) {
+    return fetchApi('/entities/accounts', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async createPerson(data) {
+    return fetchApi('/entities/persons', { method: 'POST', body: JSON.stringify(data) });
+  },
+
   async getFlags() { 
-    if (USE_MOCK) { await delay(); return MOCK_FLAG_EVENTS; }
     return fetchApi('/flags'); 
   },
   
   async runAnalysis() {
-    if (USE_MOCK) {
-      await delay(2000);
-      return { id: 'run_new', startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), cyclesFound: 2, entitiesFlagged: 16, status: 'completed' };
-    }
     return fetchApi('/analysis/run', { method: 'POST' });
   },
 
   async getVolumeChart() { 
-    if (USE_MOCK) { await delay(400); return MOCK_VOLUME_CHART; }
     return fetchApi('/dashboard/volume'); 
   },
   
   async overrideFlagLevel(entityId, flagLevel) {
-    if (USE_MOCK) {
-      await delay();
-      return { success: true, entityId, newFlagLevel: flagLevel };
-    }
     return fetchApi(`/flags/override`, {
       method: 'POST',
       body: JSON.stringify({ entityId, flagLevel })

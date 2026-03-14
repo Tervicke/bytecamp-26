@@ -8,8 +8,10 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import { useAmlStore } from '../../store/aml.store';
+import { useAuthStore } from '../../store/authStore';
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -21,6 +23,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { isSidebarCollapsed, toggleSidebar } = useAmlStore();
+  const logout = useAuthStore(state => state.logout);
 
   return (
     <aside
@@ -60,11 +63,25 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Collapse toggle */}
-      <div className="px-2 pb-4">
+      {/* Bottom actions */}
+      <div className="p-2 border-t border-white/5 space-y-1">
+        <button
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 text-xs font-medium"
+          title={isSidebarCollapsed ? "Logout" : undefined}
+        >
+          {isSidebarCollapsed ? <LogOut className="w-4 h-4" /> : (
+            <>
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </>
+          )}
+        </button>
+
         <button
           onClick={toggleSidebar}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all duration-200 text-xs"
+          title={isSidebarCollapsed ? "Expand" : undefined}
         >
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : (
             <>
