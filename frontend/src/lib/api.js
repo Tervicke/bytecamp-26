@@ -194,13 +194,27 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false';
  * Universal fetch wrapper for the real backend
  */
 async function fetchApi(endpoint, options = {}) {
+  const token = localStorage.getItem('auth_token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.reload();
+  }
+
   if (!response.ok) {
     throw new Error(`API error: ${response.statusText} (${response.status}) at ${endpoint}`);
   }
