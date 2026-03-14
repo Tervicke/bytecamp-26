@@ -40,9 +40,16 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
         : [],
     }));
 
-    const evaluated = await Promise.all(
-      parsedTransactions.map(async (txn) => applyAllRulesToTransaction(txn))
-    );
+    // Process in batches to balance performance and connection pool limits
+    const BATCH_SIZE = 10;
+    const evaluated = [];
+    for (let i = 0; i < parsedTransactions.length; i += BATCH_SIZE) {
+      const batch = parsedTransactions.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map((txn) => applyAllRulesToTransaction(txn))
+      );
+      evaluated.push(...results);
+    }
 
     const transactionsWithFlags = evaluated.map((r) => r.transaction);
 

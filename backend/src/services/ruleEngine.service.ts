@@ -114,13 +114,22 @@ export type CircularTransactionDetection = {
   transactionPath: CircularTxnPathEdge[];
 };
 
+const calculateSeverityFromCount = (count: number): number => {
+  if (count >= 2 && count <= 3) return 6;
+  if (count === 4) return 5;
+  if (count >= 5 && count <= 6) return 4;
+  if (count >= 7 && count <= 8) return 3;
+  return 0;
+};
+
 export async function detectCircularTransaction(
   txn: Transaction
 ): Promise<CircularTransactionDetection[]> {
   const query = `
       MATCH (from:BankAccount {id: $fromAccountId})
       MATCH (to:BankAccount {id: $toAccountId})
-      MATCH path = (to)-[:TRANSFERS_TO*1..6]->(from)
+      // Use shortestPath because the smallest node count = highest severity
+      MATCH path = shortestPath((to)-[:TRANSFERS_TO*1..7]->(from))
       RETURN
         $transaction AS transaction,
         [n IN nodes(path) | n.id] AS accountPath,
@@ -133,7 +142,6 @@ export async function detectCircularTransaction(
             referenceNumber: r.referenceNumber,
             flagLevel: r.flagLevel
         }] AS transactionPath
-      LIMIT 5
   `;
 
   return await runWrite<CircularTransactionDetection>(query, {
@@ -148,10 +156,15 @@ export async function circularTransactionRule(
 ): Promise<TransactionRuleResult<CircularTransactionDetection[]>> {
   const detections = await detectCircularTransaction(txn);
 
+  const severities = detections.map((d) =>
+    calculateSeverityFromCount(d.accountPath.length)
+  );
+  const severity = severities.length > 0 ? Math.max(...severities) : 0;
+
   return {
     ruleName: "circularTransaction",
     triggered: detections.length > 0,
-    severity: 6, // highest for test
+    severity,
     data: detections,
   };
 }
@@ -160,23 +173,34 @@ export async function circularTransactionRule(
 
 export type SharedOwnershipDetection = {
   sharedOwner: string;
+  companyCount: number;
 };
 
 export async function detectSharedOwnership(
   txn: Transaction
 ): Promise<SharedOwnershipDetection[]> {
   const query = `
-      MATCH (p:Person)-[:OWNS]->(start:Company)
-      MATCH (p)-[:OWNS]->(end:Company)
+      MATCH (from:BankAccount {id: $fromAccountId})
+      MATCH (to:BankAccount {id: $toAccountId})
+      
+      // Find companies involved in the transaction chain
+      MATCH (start:Company)-[:HOLDS_ACCOUNT]->(accStart:BankAccount)
+      MATCH p1 = shortestPath((accStart)-[:TRANSFERS_TO*0..6]->(from))
+      
+      MATCH (end:Company)-[:HOLDS_ACCOUNT]->(accEnd:BankAccount)
+      MATCH p2 = shortestPath((to)-[:TRANSFERS_TO*0..6]->(accEnd))
+      
+      // Check for shared ownership
+      MATCH (p:Person)-[:OWNS]->(start)
+      MATCH (p)-[:OWNS]->(end)
       WHERE start <> end
-      MATCH (start)-[:HOLDS_ACCOUNT]->(accStart:BankAccount)
-      MATCH (end)-[:HOLDS_ACCOUNT]->(accEnd:BankAccount)
-      MATCH p1 = (accStart)-[:TRANSFERS_TO*0..3]->(from:BankAccount {id: $fromAccountId})
-      MATCH (from)-[:TRANSFERS_TO {id: $txnId}]->(to:BankAccount {id: $toAccountId})
-      MATCH p2 = (to)-[:TRANSFERS_TO*0..3]->(accEnd)
-      WHERE length(p1) + length(p2) + 1 <= 4
-      RETURN DISTINCT p.name AS sharedOwner
-      LIMIT 10
+      
+      WITH p, (length(p1) + length(p2) + 2) AS count
+      WHERE count <= 8
+      
+      RETURN DISTINCT p.name AS sharedOwner, count AS companyCount
+      ORDER BY count ASC
+      LIMIT 5
   `;
 
   return await runWrite<SharedOwnershipDetection>(query, {
@@ -191,10 +215,15 @@ export async function sharedOwnershipRule(
 ): Promise<TransactionRuleResult<SharedOwnershipDetection[]>> {
   const detections = await detectSharedOwnership(txn);
 
+  const severities = detections.map((d) =>
+    calculateSeverityFromCount(d.companyCount)
+  );
+  const severity = severities.length > 0 ? Math.max(...severities) : 0;
+
   return {
     ruleName: "sharedOwnership",
     triggered: detections.length > 0,
-    severity: 6, // highest for test
+    severity,
     data: detections,
   };
 }
