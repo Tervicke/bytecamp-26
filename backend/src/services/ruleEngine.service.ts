@@ -1,5 +1,5 @@
 import type { Transaction } from "../types/transactions";
-import { runWrite } from "../lib/neo4j";
+import { runWrite } from "../lib/neo4j/neo4j";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ export type TransactionRule<TData = unknown> = (
 
 const RULES_BY_TRANSACTION_TYPE: Record<string, TransactionRule[]> = {
   // Example: apply circular detection to transfers
-  TRANSFER: [circularTransactionRule],
+  TRANSFER: [circularTransactionRule, sharedOwnershipRule],
 };
 
 /**
@@ -44,6 +44,7 @@ export async function evaluateTransactionRules(
  */
 const ALL_RULES: TransactionRule[] = [
   circularTransactionRule,
+  sharedOwnershipRule,
   // add future rules here
 ];
 
@@ -171,6 +172,64 @@ export async function circularTransactionRule(
 
   return {
     ruleName: "circularTransaction",
+    triggered: detections.length > 0,
+    data: detections,
+  };
+}
+
+// ─── Rule: Shared Ownership Detection ──────────────────────────────────────────
+
+export type SharedOwnershipDetection = {
+  sharedOwner: string;
+};
+
+/**
+ * Detects if the current transaction is part of a transfer path (1–4 steps)
+ * between two distinct companies that share at least one common owner (Person).
+ */
+export async function detectSharedOwnership(
+  txn: Transaction
+): Promise<SharedOwnershipDetection[]> {
+  const query = `
+      MATCH (p:Person)-[:OWNS]->(start:Company)
+      MATCH (p)-[:OWNS]->(end:Company)
+      WHERE start <> end
+
+      MATCH (start)-[:HOLDS_ACCOUNT]->(accStart:BankAccount)
+      MATCH (end)-[:HOLDS_ACCOUNT]->(accEnd:BankAccount)
+
+      // Find paths of length 1 to 4 that contain the current transaction
+      // and connect a bank account of startCompany to a bank account of endCompany.
+      MATCH p1 = (accStart)-[:TRANSFERS_TO*0..3]->(from:BankAccount {id: $fromAccountId})
+      MATCH (from)-[:TRANSFERS_TO {id: $txnId}]->(to:BankAccount {id: $toAccountId})
+      MATCH p2 = (to)-[:TRANSFERS_TO*0..3]->(accEnd)
+
+      WHERE length(p1) + length(p2) + 1 <= 4
+
+      RETURN DISTINCT
+        p.name AS sharedOwner
+      LIMIT 10
+    `;
+
+  const records = await runWrite<SharedOwnershipDetection>(query, {
+    fromAccountId: txn.fromAccountId,
+    toAccountId: txn.toAccountId,
+    txnId: txn.id,
+  });
+
+  return records;
+}
+
+/**
+ * Rule wrapper for shared ownership detection.
+ */
+export async function sharedOwnershipRule(
+  txn: Transaction
+): Promise<TransactionRuleResult<SharedOwnershipDetection[]>> {
+  const detections = await detectSharedOwnership(txn);
+
+  return {
+    ruleName: "sharedOwnership",
     triggered: detections.length > 0,
     data: detections,
   };

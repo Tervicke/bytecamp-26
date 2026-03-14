@@ -75,7 +75,7 @@ export const MOCK_BANK_ACCOUNTS = [
   { id: 'ba021', companyId: 'c019', accountNumber: 'CI-GEO-223355', bankName: 'Cayman National', currency: 'USD', balance: 4900000.00, flagLevel: 'CRITICAL', cashFlowRatio: 0.91, txnCount30d: 41 },
 ];
 
-export const MOCK_TRANSACTIONS = [
+export let MOCK_TRANSACTIONS = [
   // Cycle 1: ba001 -> ba009 -> ba013 -> ba016 -> ba021 -> ba001
   { id: 't001', fromAccountId: 'ba001', toAccountId: 'ba009', amount: 500000.00, currency: 'USD', txnDate: '2025-06-01T10:00:00Z', txnType: 'wire', description: 'Consulting services payment - Q2 2025', isSuspicious: true, flagLevel: 'CRITICAL', flagReasons: ['cycle_detected'] },
   { id: 't002', fromAccountId: 'ba009', toAccountId: 'ba013', amount: 480000.00, currency: 'USD', txnDate: '2025-06-05T11:30:00Z', txnType: 'wire', description: 'Loan repayment per agreement dated 2025-01-01', isSuspicious: true, flagLevel: 'CRITICAL', flagReasons: ['cycle_detected'] },
@@ -194,13 +194,27 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false';
  * Universal fetch wrapper for the real backend
  */
 async function fetchApi(endpoint, options = {}) {
+  const token = localStorage.getItem('auth_token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.reload();
+  }
+
   if (!response.ok) {
     throw new Error(`API error: ${response.statusText} (${response.status}) at ${endpoint}`);
   }
@@ -255,19 +269,55 @@ export const api = {
   async uploadTransactionsCSV(file) {
     if (USE_MOCK) {
       await delay(1500);
-      return { message: "Mock upload successful", count: 120 };
+      try {
+        const text = await file.text();
+        const rows = text.split('\n').slice(1).filter(r => r.trim()); // simple CSV parsing
+        const newTxns = rows.map((r, i) => {
+           const cols = r.split(',');
+           return {
+              id: cols[0] || `new_t_${Date.now()}_${i}`,
+              fromAccountId: cols[1] || 'ba001',
+              toAccountId: cols[2] || 'ba002',
+              amount: parseFloat(cols[3]) || 1000,
+              currency: 'USD',
+              txnDate: new Date().toISOString(),
+              txnType: 'wire',
+              description: cols[7] || 'Uploaded transaction',
+              isSuspicious: false,
+              flagLevel: 'NONE',
+              flagReasons: []
+           };
+        });
+        MOCK_TRANSACTIONS = [...newTxns, ...MOCK_TRANSACTIONS];
+        return { message: "Mock upload successful", count: newTxns.length, transactions: newTxns };
+      } catch (e) {
+        return { message: "Mock upload failed", count: 0, transactions: [] };
+      }
     }
     const formData = new FormData();
     formData.append('file', file);
     
+    const token = localStorage.getItem('auth_token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     // We can't use our standard fetchApi wrapper here because we need to omit the 'Content-Type' header 
     // so the browser sets the correct boundary for multipart/form-data.
     const response = await fetch(`${API_BASE_URL}/transactions/upload`, {
       method: 'POST',
       body: formData,
-      // No headers needed for FormData
+      headers
     });
     
+    console.log(response);
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.reload();
+    }
+
     if (!response.ok) {
       throw new Error(`Upload failed: ${response.statusText}`);
     }

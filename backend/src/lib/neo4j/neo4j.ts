@@ -4,7 +4,7 @@ import neo4j, { type Driver, type Session } from 'neo4j-driver';
 
 // Force-load .env from server root, overriding any Windows system env vars
 // (Windows USERNAME shadows our .env Username without override: true)
-dotenvConfig({ path: join(import.meta.dir, '../../.env'), override: true });
+dotenvConfig({ path: join(import.meta.dir, '../../../.env'), override: true });
 
 // Env vars — exact names from .env
 const NEO4J_URI = process.env.connection_url!;

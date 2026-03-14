@@ -37,8 +37,22 @@ export default function Transactions() {
     mutationFn: (file) => api.uploadTransactionsCSV(file),
     onSuccess: (data) => {
       setUploadStatus('success');
-      // Invalidate to refresh the table and dashboard stats
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      // Prepend new transactions to actively viewed table cache
+      if (data.transactions && data.transactions.length > 0) {
+        const formattedTxns = data.transactions.map(t => ({
+          ...t,
+          fromAccountName: t.fromAccountName || t.fromAccountId,
+          toAccountName: t.toAccountName || t.toAccountId
+        }));
+        queryClient.setQueryData(['transactions', flagFilter, searchQuery], (old) => {
+          if (!old) return formattedTxns;
+          const existingIds = new Set(old.map(t => t.id));
+          const newTxns = formattedTxns.filter(t => !existingIds.has(t.id));
+          return [...newTxns, ...old];
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setTimeout(() => setUploadStatus(null), 3000);
     },

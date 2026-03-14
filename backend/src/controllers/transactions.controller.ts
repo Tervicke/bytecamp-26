@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { parse } from "csv-parse/sync";
 import type { Transaction } from "../types/transactions.js";
 import { applyAllRulesToTransaction } from "../services/ruleEngine.service.js";
-import { runWrite, runRead } from "../lib/neo4j.js";
+import { runWrite, runRead } from "../lib/neo4j/neo4j.js";
 
 export const uploadTransactionsCSV = async (req: Request, res: Response) => {
   try {
@@ -16,6 +16,7 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      relax_column_count: true,
     });
 
     const parsedTransactions: Transaction[] = records.map((record: any) => ({
