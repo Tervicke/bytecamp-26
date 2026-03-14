@@ -68,10 +68,6 @@ export async function runQuery<T = Record<string, unknown>>(
     }
 }
 
-/**
- * Run a write transaction (uses write-mode session).
- * Prefer this for CREATE / SET / DELETE operations.
- */
 export async function runWrite<T = Record<string, unknown>>(
     cypher: string,
     params: Record<string, unknown> = {}
@@ -79,6 +75,23 @@ export async function runWrite<T = Record<string, unknown>>(
     const session = driver.session({ database: NEO4J_DB, defaultAccessMode: neo4j.session.WRITE });
     try {
         const result = await session.executeWrite((tx) => tx.run(cypher, params));
+        return result.records.map((record) => record.toObject() as T);
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Run a read transaction (uses read-mode session).
+ * Prefer this for MATCH / RETURN operations.
+ */
+export async function runRead<T = Record<string, unknown>>(
+    cypher: string,
+    params: Record<string, unknown> = {}
+): Promise<T[]> {
+    const session = driver.session({ database: NEO4J_DB, defaultAccessMode: neo4j.session.READ });
+    try {
+        const result = await session.executeRead((tx) => tx.run(cypher, params));
         return result.records.map((record) => record.toObject() as T);
     } finally {
         await session.close();
