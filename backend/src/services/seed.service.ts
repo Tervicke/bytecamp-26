@@ -11,7 +11,7 @@
  * ───────────────────────────────────────────────────────
  * companies.csv       → (:Company) nodes
  * persons.csv         → (:Person) nodes
- * bank_accounts.csv   → (:BankAccount) nodes + [:HOLDS_ACCOUNT] edges
+ * bank_accounts.csv   es (:BankAccount) nodes + [:HOLDS_ACCOUNT] edges
  * ownership.csv       → [:OWNS] edges (Person → Company)
  * subsidiaries.csv    → [:SUBSIDIARY_OF] edges (Company → Company)
  * transactions.csv    → [:TRANSFERS_TO] edges only (BankAccount → BankAccount)
@@ -20,8 +20,8 @@
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
 import { readFileSync } from 'fs';
-import { connectNeo4j, closeNeo4j, runWrite } from '../lib/neo4j.ts';
-import { applySchema } from '../lib/neo4j/schema.ts';
+import { connectNeo4j, closeNeo4j, runWrite } from '../lib/neo4j/neo4j';
+import { applySchema } from '../lib/neo4j/schema';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -243,7 +243,7 @@ async function seedTransactions(): Promise<void> {
        MERGE (from)-[tr:TRANSFERS_TO {id: $id}]->(to)
        SET tr.amount          = $amount,
            tr.currency        = $currency,
-           tr.txnDate         = $txnDate,
+           tr.txnDate         = datetime($txnDate),
            tr.txnType         = $txnType,
            tr.description     = $description,
            tr.referenceNumber = $referenceNumber,

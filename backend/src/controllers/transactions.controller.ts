@@ -55,6 +55,9 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
 
     const transactionsWithFlags = evaluated.map((r) => r.transaction);
 
+    // Delete existing transactions to prevent "caching" of old upload data
+    await runWrite(`MATCH ()-[tr:TRANSFERS_TO]->() DELETE tr`);
+
     // Persist to Neo4j
     const query = `
       UNWIND $transactions AS r
