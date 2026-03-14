@@ -60,53 +60,58 @@ export default function Transactions() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs text-gray-500 mt-1">
             Track all financial transfers. Vulnerable transactions are highlighted with danger indicators.
           </p>
         </div>
-        {stats && (
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {uploadStatus === 'success' && (
-              <span className="text-xs text-green-400 flex items-center gap-1 animate-fade-in">
-                <CheckCircle className="w-3.5 h-3.5" /> Uploaded
-              </span>
-            )}
-            {uploadStatus === 'error' && (
-              <span className="text-xs text-red-400 flex items-center gap-1 animate-fade-in">
-                <AlertTriangle className="w-3.5 h-3.5" /> Failed
-              </span>
-            )}
-            
-            <div className="relative">
-              <input 
-                type="file" 
-                accept=".csv"
-                id="csv-upload"
-                className="hidden" 
-                onChange={handleFileUpload}
-                disabled={uploadMutation.isPending}
-              />
-              <label 
-                htmlFor="csv-upload" 
-                className={`btn-primary text-xs cursor-pointer ${uploadMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {uploadMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                {uploadMutation.isPending ? 'Uploading...' : 'Upload CSV'}
-              </label>
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-              <span className="text-xs text-red-400 font-medium">{stats.criticalAlerts} critical</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-navy-700 border border-white/5">
-              <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-xs text-gray-400">{stats.totalTransactions} total</span>
-            </div>
+        
+        <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+          {/* Upload Button - Always visible */}
+          {uploadStatus === 'success' && (
+            <span className="text-xs text-green-400 flex items-center gap-1 animate-fade-in">
+              <CheckCircle className="w-3.5 h-3.5" /> Uploaded
+            </span>
+          )}
+          {uploadStatus === 'error' && (
+            <span className="text-xs text-red-400 flex items-center gap-1 animate-fade-in">
+              <AlertTriangle className="w-3.5 h-3.5" /> Failed
+            </span>
+          )}
+          
+          <div className="relative">
+            <input 
+              type="file" 
+              accept=".csv"
+              id="csv-upload"
+              className="hidden" 
+              onChange={handleFileUpload}
+              disabled={uploadMutation.isPending}
+            />
+            <label 
+              htmlFor="csv-upload" 
+              className={`btn-primary text-xs cursor-pointer ${uploadMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {uploadMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {uploadMutation.isPending ? 'Uploading...' : 'Upload CSV'}
+            </label>
           </div>
-        )}
+
+          {/* Stats - Rendered when available */}
+          {stats && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-xs text-red-400 font-medium">{stats.criticalAlerts} critical</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-navy-700 border border-white/5">
+                <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs text-gray-400">{stats.totalTransactions} total</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Danger legend */}

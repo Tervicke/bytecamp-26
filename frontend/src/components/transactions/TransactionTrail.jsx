@@ -7,7 +7,7 @@ import DangerBadge from './DangerBadge';
 import { format } from 'date-fns';
 
 export default function TransactionTrail() {
-  const { trailTransactionId, isTrailOpen, closeTrail, openTrail, selectedTransaction } = useAmlStore();
+  const { trailTransactionId, isTrailOpen, closeTrail, openTrail, selectedTransaction, selectTransaction } = useAmlStore();
 
   const { data: trail, isLoading } = useQuery({
     queryKey: ['trail', trailTransactionId],
@@ -139,7 +139,10 @@ export default function TransactionTrail() {
                   {relatedTxns.map(rt => (
                     <button
                       key={rt.id}
-                      onClick={() => openTrail(rt.id)}
+                      onClick={() => {
+                        openTrail(rt.id);
+                        selectTransaction(rt);
+                      }}
                       className={`w-full text-left p-2.5 rounded-lg border transition-all duration-200 hover:border-white/20 cursor-pointer ${
                         rt.flagLevel === 'CRITICAL' ? 'bg-red-500/5 border-red-500/20' :
                         rt.flagLevel === 'HIGH' ? 'bg-orange-500/5 border-orange-500/20' :
