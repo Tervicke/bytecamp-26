@@ -68,28 +68,29 @@ export async function applyAllRulesToTransaction(
 ): Promise<ApplyRulesResult> {
   const ruleResults = await evaluateAllTransactionRules(txn);
 
-  let highestSeverity = 0;
+  let totalSeverity = 0;
   const triggeredRules: string[] = [];
 
   for (const r of ruleResults) {
     if (r.triggered) {
       triggeredRules.push(r.ruleName);
-      if (r.severity > highestSeverity) {
-        highestSeverity = r.severity;
-      }
+      totalSeverity += r.severity;
     }
   }
 
-  const isSuspicious = highestSeverity > 0;
-
-  const flagLevel = SeverityMap[highestSeverity] ?? "None";
+  const triggeredCount = triggeredRules.length;
+  // Calculate average severity (rounding to nearest integer in SeverityMap range)
+  const averageSeverity = triggeredCount > 0 ? Math.round(totalSeverity / triggeredCount) : 0;
+  
+  const isSuspicious = averageSeverity > 0;
+  const flagLevel = SeverityMap[averageSeverity] ?? "None";
 
   return {
     transaction: {
       ...txn,
       isSuspicious,
-      flagReasons: isSuspicious ? triggeredRules : [],
-      severity: isSuspicious ? highestSeverity : 0,
+      flagReasons: triggeredRules,
+      severity: averageSeverity,
       flagLevel,
     },
     ruleResults,
