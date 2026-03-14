@@ -3,7 +3,7 @@
  * Relationship types: OWNS | SUBSIDIARY_OF | HOLDS_ACCOUNT | TRANSFERS_TO
  */
 
-import { runWrite } from './neo4j.ts';
+import { runWrite } from './neo4j';
 
 // ─── Constraint definitions ───────────────────────────────────────────────────
 
