@@ -1,5 +1,5 @@
 import type { Transaction } from "../types/transactions";
-import { runWrite } from "../lib/neo4j";
+import { runWrite } from "../lib/neo4j/neo4j";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

@@ -24,14 +24,14 @@
 ┌─────────────────────▼───────────────────────────────────┐
 │                   Express Backend (Bun)                  │
 │          TypeScript + Zod + Pino logger                  │
-└──────────┬──────────────────────────┬───────────────────┘
-           │                          │
-┌──────────▼───────────┐  ┌──────────▼──────────────────┐
-│  Neo4j (Graph DB)    │  │  Supabase Postgres + Prisma  │
-│  - Entity graph      │  │  - Audit-grade ledger        │
-│  - Relationship maps │  │  - Transaction records       │
-│  - Graph algorithms  │  │  - Flag history              │
-└──────────────────────┘  └──────────────────────────────┘
+└──────────┬───────────────────────────────────────────────┘
+           │                          
+┌──────────▼───────────┐
+│  Neo4j (Graph DB)    │
+│  - Entity graph      │
+│  - Relationship maps │
+│  - Graph algorithms  │ 
+└──────────────────────┘  
 ```
 
 ### Data Flow
@@ -160,7 +160,7 @@ bytecamp-26/
 │   │   ├── server.ts            # Bun entry point
 │   │   ├── lib/
 │   │   │   ├── neo4j.ts         # Neo4j driver singleton
-│   │   │   ├── prisma.ts        # Prisma client singleton
+│   │   │   ├── db.ts            # SQLite client
 │   │   │   └── logger.ts        # Pino logger
 │   │   ├── routes/
 │   │   │   ├── transactions.routes.ts
@@ -244,6 +244,11 @@ bytecamp-26/
 | GET | `/api/flags` | All current flags with reasons |
 | POST | `/api/flags/run-analysis` | Manually trigger full analysis pipeline |
 | PATCH | `/api/flags/:entityId` | Override flag level (admin) |
+
+### Authentication
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/login` | Authenticate and receive a JWT |
 
 
 ## Detection Algorithms
@@ -352,7 +357,6 @@ cd frontend && bun install && bun run dev
 ### Environment Variables
 ```env
 # backend/.env
-DATABASE_URL=postgresql://user:password@localhost:5432/amlshield
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=password
@@ -361,37 +365,6 @@ VOLUME_THRESHOLD=10
 CASH_FLOW_THRESHOLD=0.70
 ANALYSIS_ON_INGEST=true
 ```
-
-### docker-compose.yml (minimal)
-```yaml
-version: '3.8'
-services:
-  neo4j:
-    image: neo4j:5
-    ports:
-      - "7474:7474"   # Browser UI
-      - "7687:7687"   # Bolt protocol
-    environment:
-      NEO4J_AUTH: neo4j/password
-    volumes:
-      - neo4j_data:/data
-
-  postgres:
-    image: postgres:15
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: amlshield
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-
-volumes:
-  neo4j_data:
-  pg_data:
-```
-
 ---
 
 ## Code Quality Standards

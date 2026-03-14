@@ -7,8 +7,16 @@ import Transactions from './pages/Transactions';
 import GraphView from './pages/GraphView';
 import Entities from './pages/Entities';
 import Flags from './pages/Flags';
+import Login from './pages/Login';
+import { useAuthStore } from './store/authStore';
 
 export default function App() {
+  const token = useAuthStore((state) => state.token);
+
+  if (!token) {
+    return <Login />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
