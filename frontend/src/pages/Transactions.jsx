@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useAmlStore } from '../store/aml.store';
 import TransactionTable from '../components/transactions/TransactionTable';
 import TransactionTrail from '../components/transactions/TransactionTrail';
-import { Search, Filter, AlertTriangle, ArrowLeftRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Search, Filter, AlertTriangle, ArrowLeftRight, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
 const FLAG_FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
@@ -19,6 +19,8 @@ const FLAG_COLORS = {
 export default function Transactions() {
   const { flagFilter, setFlagFilter, searchQuery, setSearchQuery, isTrailOpen } = useAmlStore();
   const [localSearch, setLocalSearch] = useState('');
+  const queryClient = useQueryClient();
+  const [uploadStatus, setUploadStatus] = useState(null); // null, 'success', 'error'
 
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -29,6 +31,30 @@ export default function Transactions() {
     const val = e.target.value;
     setLocalSearch(val);
     setSearchQuery(val);
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: (file) => api.uploadTransactionsCSV(file),
+    onSuccess: (data) => {
+      setUploadStatus('success');
+      // Invalidate to refresh the table and dashboard stats
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setTimeout(() => setUploadStatus(null), 3000);
+    },
+    onError: (err) => {
+      console.error(err);
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(null), 3000);
+    }
+  });
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadMutation.mutate(file);
+    // Reset input so the same file could be uploaded again
+    e.target.value = '';
   };
 
   return (
@@ -42,6 +68,35 @@ export default function Transactions() {
         </div>
         {stats && (
           <div className="flex items-center gap-3 flex-shrink-0">
+            {uploadStatus === 'success' && (
+              <span className="text-xs text-green-400 flex items-center gap-1 animate-fade-in">
+                <CheckCircle className="w-3.5 h-3.5" /> Uploaded
+              </span>
+            )}
+            {uploadStatus === 'error' && (
+              <span className="text-xs text-red-400 flex items-center gap-1 animate-fade-in">
+                <AlertTriangle className="w-3.5 h-3.5" /> Failed
+              </span>
+            )}
+            
+            <div className="relative">
+              <input 
+                type="file" 
+                accept=".csv"
+                id="csv-upload"
+                className="hidden" 
+                onChange={handleFileUpload}
+                disabled={uploadMutation.isPending}
+              />
+              <label 
+                htmlFor="csv-upload" 
+                className={`btn-primary text-xs cursor-pointer ${uploadMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {uploadMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                {uploadMutation.isPending ? 'Uploading...' : 'Upload CSV'}
+              </label>
+            </div>
+
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
               <span className="text-xs text-red-400 font-medium">{stats.criticalAlerts} critical</span>

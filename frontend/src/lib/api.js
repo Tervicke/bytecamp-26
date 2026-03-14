@@ -252,6 +252,28 @@ export const api = {
     return fetchApi(`/transactions${qs}`);
   },
 
+  async uploadTransactionsCSV(file) {
+    if (USE_MOCK) {
+      await delay(1500);
+      return { message: "Mock upload successful", count: 120 };
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // We can't use our standard fetchApi wrapper here because we need to omit the 'Content-Type' header 
+    // so the browser sets the correct boundary for multipart/form-data.
+    const response = await fetch(`${API_BASE_URL}/transactions/upload`, {
+      method: 'POST',
+      body: formData,
+      // No headers needed for FormData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+    return response.json();
+  },
+
   async getTransactionTrail(txnId) {
     if (USE_MOCK) {
       await delay();
