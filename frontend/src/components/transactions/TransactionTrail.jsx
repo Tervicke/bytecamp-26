@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api, MOCK_TRANSACTIONS } from '../../lib/api';
+import { api } from '../../lib/api';
 import { useAmlStore } from '../../store/aml.store';
 import { X, AlertTriangle, GitBranch, DollarSign } from 'lucide-react';
 import GraphVisualization from '../graph/GraphVisualization';
@@ -7,7 +7,7 @@ import DangerBadge from './DangerBadge';
 import { format } from 'date-fns';
 
 export default function TransactionTrail() {
-  const { trailTransactionId, isTrailOpen, closeTrail, openTrail } = useAmlStore();
+  const { trailTransactionId, isTrailOpen, closeTrail, openTrail, selectedTransaction } = useAmlStore();
 
   const { data: trail, isLoading } = useQuery({
     queryKey: ['trail', trailTransactionId],
@@ -15,10 +15,14 @@ export default function TransactionTrail() {
     enabled: !!trailTransactionId && isTrailOpen,
   });
 
-  const txn = MOCK_TRANSACTIONS.find(t => t.id === trailTransactionId);
-  const relatedTxns = trail?.relatedTransactions
-    ?.map(id => MOCK_TRANSACTIONS.find(t => t.id === id))
-    .filter(Boolean) || [];
+  // Use the transaction already stored in Zustand (set when clicking "View Trail" in the table)
+  const txn = selectedTransaction;
+
+  // Related transactions come from the trail API response, not mock data
+  // trail.relatedTransactions is an array of transaction objects from the backend
+  const relatedTxns = Array.isArray(trail?.relatedTransactions)
+    ? trail.relatedTransactions.filter(Boolean)
+    : [];
 
   if (!isTrailOpen) return null;
 
@@ -87,7 +91,11 @@ export default function TransactionTrail() {
                   </div>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="h-80 flex items-center justify-center">
+                <p className="text-gray-500 text-sm">No trail data available for this transaction.</p>
+              </div>
+            )}
           </div>
 
           {/* Right sidebar - details */}
@@ -98,10 +106,12 @@ export default function TransactionTrail() {
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaction Details</h3>
                 <div className="space-y-2">
                   <InfoRow label="Amount" value={`$${Number(txn.amount).toLocaleString()} ${txn.currency}`} highlight />
-                  <InfoRow label="Type" value={txn.txnType.toUpperCase()} />
-                  <InfoRow label="Date" value={format(new Date(txn.txnDate), 'MMM d, yyyy HH:mm')} />
+                  <InfoRow label="Type" value={txn.txnType?.toUpperCase()} />
+                  <InfoRow label="Date" value={txn.txnDate ? format(new Date(txn.txnDate), 'MMM d, yyyy HH:mm') : '—'} />
+                  <InfoRow label="From" value={txn.fromAccountName || txn.fromAccountId || '—'} />
+                  <InfoRow label="To" value={txn.toAccountName || txn.toAccountId || '—'} />
                   <InfoRow label="Description" value={txn.description} />
-                  {txn.flagReasons.length > 0 && (
+                  {txn.flagReasons?.length > 0 && (
                     <div className="pt-1">
                       <p className="text-xs text-gray-500 mb-1">Flag reasons:</p>
                       {txn.flagReasons.map(r => (
@@ -121,7 +131,9 @@ export default function TransactionTrail() {
                 Related Transactions ({relatedTxns.length})
               </h3>
               {relatedTxns.length === 0 ? (
-                <p className="text-xs text-gray-600">No related transactions</p>
+                <p className="text-xs text-gray-600">
+                  {isLoading ? 'Loading...' : 'No related transactions'}
+                </p>
               ) : (
                 <div className="space-y-2">
                   {relatedTxns.map(rt => (
@@ -136,7 +148,7 @@ export default function TransactionTrail() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[11px] font-mono text-indigo-400">{rt.id}</span>
-                        <DangerBadge level={rt.flagLevel} />
+                        <DangerBadge level={rt.flagLevel?.toUpperCase()} />
                       </div>
                       <div className="flex items-center gap-1 text-xs text-gray-400">
                         <DollarSign className="w-3 h-3" />
