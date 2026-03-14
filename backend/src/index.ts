@@ -1,51 +1,21 @@
-import 'dotenv/config';
-import app from './app.ts';
-import { connectNeo4j } from './lib/neo4j/neo4j.ts';
-import { db } from './lib/SQLite/db.ts';
-import bcrypt from 'bcryptjs';
+import express from "express";
+import transactionsRoutes from "./routes/transactions.routes.js";
+import { connectNeo4j } from "./lib/neo4j/neo4j.ts";
 
-const PORT = process.env.PORT || 3000;
+const app = express();
 
-async function seedAdminUser() {
-  // Check if any users exist
-  const query = db.query('SELECT COUNT(*) as count FROM users');
-  const result = query.get() as { count: number };
+app.use(express.json());
 
-  if (result.count === 0) {
-    console.log('[Auth] No users found. Seeding default admin user...');
+await connectNeo4j();
+app.use("/api/transactions", transactionsRoutes);
 
-    const username = 'admin';
-    const passwordPlain = 'admin123';
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(passwordPlain, salt);
+app.get("/", (req, res) => {
+  res.send("Server running with Bun + Express + TypeScript");
+});
 
-    const insert = db.prepare('INSERT INTO users (id, username, password_hash, role) VALUES ($id, $username, $passwordHash, $role)');
-    insert.run({
-      $id: crypto.randomUUID(),
-      $username: username,
-      $passwordHash: passwordHash,
-      $role: 'admin'
-    });
+const PORT = 3000;
 
-    console.log(`[Auth] Default admin seeded. (Username: ${username}, Password: ${passwordPlain})`);
-  } else {
-    console.log(`[Auth] Users exist (${result.count}). Skipping admin seed.`);
-  }
-}
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-async function startServer() {
-  try {
-    await connectNeo4j();
-    await seedAdminUser();
-
-    app.listen(PORT, () => {
-      console.log(`[Server] Running on http://localhost:${PORT}`);
-    });
-
-  } catch (err) {
-    console.error('[Server] Failed to start:', err);
-    process.exit(1);
-  }
-}
-
-startServer();
