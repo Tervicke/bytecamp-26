@@ -30,3 +30,16 @@ export async function login(req: Request, res: Response): Promise<void> {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+/**
+ * POST /api/auth/logout
+ * Since we use JWT Bearer tokens, the actual token clearing happens on the client,
+ */
+export async function logout(req: Request, res: Response): Promise<void> {
+    try {
+        res.json({ message: 'Logout successful' });
+    } catch (error) {
+        console.error('[Auth Controller] Error during logout:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
