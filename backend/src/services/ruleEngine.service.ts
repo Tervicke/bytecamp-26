@@ -58,6 +58,50 @@ export async function evaluateAllTransactionRules(
   return results;
 }
 
+// ─── Helpers: Apply rule results onto a Transaction ────────────────────────────
+
+export type ApplyRulesResult = {
+  transaction: Transaction;
+  ruleResults: TransactionRuleResult[];
+};
+
+/**
+ * Runs all known rules (ignores txnType) and returns an updated Transaction:
+ * - isSuspicious: true if any rule triggered
+ * - flagReasons: list of triggered rule names
+ * - flagLevel: single global level, "High" when any rule triggers
+ */
+export async function applyAllRulesToTransaction(
+  txn: Transaction
+): Promise<ApplyRulesResult> {
+  const ruleResults = await evaluateAllTransactionRules(txn);
+
+  const triggered = ruleResults.filter((r) => r.triggered);
+  if (triggered.length === 0) {
+    return {
+      transaction: {
+        ...txn,
+        isSuspicious: false,
+      },
+      ruleResults,
+    };
+  }
+
+  const reasons = Array.from(
+    new Set(triggered.map((r) => r.ruleName).filter(Boolean))
+  );
+
+  return {
+    transaction: {
+      ...txn,
+      isSuspicious: true,
+      flagLevel: "High",
+      flagReasons: reasons,
+    },
+    ruleResults,
+  };
+}
+
 // ─── Example Rule: Circular Transaction Detection ──────────────────────────────
 
 type CircularTxnPathEdge = {
