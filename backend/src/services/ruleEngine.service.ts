@@ -228,3 +228,84 @@ export async function sharedOwnershipRule(
     data: detections,
   };
 }
+
+// ─── Rapid Transfers Rule ────────────────────────────────────────────────
+
+export type RapidTransferDetection = {
+  transaction: Transaction;
+  windowStart: string;
+  recipientCount: number;
+  transactionsInWindow: {
+    id: string;
+    amount: number;
+    currency: string;
+    txnDate: string | Date;
+    txnType: string;
+    referenceNumber: string;
+    flagLevel: string;
+  }[];
+};
+
+// Simple severity calculation based on number of recipients in window
+const calculateRapidTransferSeverity = (recipientCount: number): number => {
+  if (recipientCount >= 10) return 6;
+  if (recipientCount >= 7) return 5;
+  if (recipientCount >= 5) return 4;
+  if (recipientCount >= 3) return 3;
+  return 0;
+};
+
+export async function detectRapidTransfers(
+  txn: Transaction
+): Promise<RapidTransferDetection[]> {
+  const query = `
+      MATCH (from:BankAccount {id: $fromAccountId})-[t:TRANSFERS_TO]->(to:BankAccount)
+      WHERE t.txnDate >= $txnDate - duration({minutes: 20})
+        AND t.txnDate <= $txnDate + duration({minutes: 20})
+      WITH from, t
+      ORDER BY t.txnDate
+      MATCH (from)-[t2:TRANSFERS_TO]->(to2:BankAccount)
+      WHERE t2.txnDate >= t.txnDate
+        AND t2.txnDate < t.txnDate + duration({minutes:20})
+      WITH from, t.txnDate AS windowStart,
+           collect(DISTINCT to2.id) AS uniqueRecipients,
+           collect({
+             id: t2.id,
+             amount: t2.amount,
+             currency: t2.currency,
+             txnDate: t2.txnDate,
+             txnType: t2.txnType,
+             referenceNumber: t2.referenceNumber,
+             flagLevel: t2.flagLevel
+           }) AS transactionsInWindow
+      WHERE size(uniqueRecipients) >= 3
+      RETURN $transaction AS transaction,
+             windowStart,
+             size(uniqueRecipients) AS recipientCount,
+             transactionsInWindow
+  `;
+  
+  return await runWrite<RapidTransferDetection>(query, {
+    fromAccountId: txn.fromAccountId,
+    txnDate: txn.txnDate,
+    transaction: txn,
+  });
+}
+
+export async function rapidTransfersRule(
+  txn: Transaction
+): Promise<TransactionRuleResult<RapidTransferDetection[]>> {
+  const detections = await detectRapidTransfers(txn);
+
+  const severities = detections.map((d) =>
+    calculateRapidTransferSeverity(d.recipientCount)
+  );
+  const severity = severities.length > 0 ? Math.max(...severities) : 0;
+
+  return {
+    ruleName: "rapidTransfers",
+    triggered: detections.length > 0,
+    severity,
+    data: detections,
+  };
+}

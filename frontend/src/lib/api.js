@@ -134,6 +134,18 @@ export const api = {
     return normalizeFlagLevel(data);
   },
 
+  async createCompany(data) {
+    return fetchApi('/entities/companies', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async createBankAccount(data) {
+    return fetchApi('/entities/accounts', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async createPerson(data) {
+    return fetchApi('/entities/persons', { method: 'POST', body: JSON.stringify(data) });
+  },
+
   async getFlags() { 
     const data = await fetchApi('/flags'); 
     return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useAmlStore } from '../store/aml.store';
 import TransactionTable from '../components/transactions/TransactionTable';
 import TransactionTrail from '../components/transactions/TransactionTrail';
-import { Search, Filter, AlertTriangle, ArrowLeftRight, Upload, Loader2, CheckCircle } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import AddTransactionModal from '../components/forms/AddTransactionModal';
+import { Search, Filter, AlertTriangle, ArrowLeftRight, Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
 const FLAG_FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
@@ -19,6 +20,7 @@ const FLAG_COLORS = {
 export default function Transactions() {
   const { flagFilter, setFlagFilter, searchQuery, setSearchQuery, isTrailOpen } = useAmlStore();
   const [localSearch, setLocalSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const [uploadStatus, setUploadStatus] = useState(null); // null, 'success', 'error'
 
@@ -66,6 +68,7 @@ export default function Transactions() {
             Track all financial transfers. Vulnerable transactions are highlighted with danger indicators.
           </p>
         </div>
+<<<<<<< HEAD
         
         <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
           {/* Upload Button - Always visible */}
@@ -96,6 +99,55 @@ export default function Transactions() {
               {uploadMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               {uploadMutation.isPending ? 'Uploading...' : 'Upload CSV'}
             </label>
+=======
+        {stats && (
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {uploadStatus === 'success' && (
+              <span className="text-xs text-green-400 flex items-center gap-1 animate-fade-in">
+                <CheckCircle className="w-3.5 h-3.5" /> Uploaded
+              </span>
+            )}
+            {uploadStatus === 'error' && (
+              <span className="text-xs text-red-400 flex items-center gap-1 animate-fade-in">
+                <AlertTriangle className="w-3.5 h-3.5" /> Failed
+              </span>
+            )}
+            
+            <div className="relative">
+              <input 
+                type="file" 
+                accept=".csv"
+                id="csv-upload"
+                className="hidden" 
+                onChange={handleFileUpload}
+                disabled={uploadMutation.isPending}
+              />
+              <label 
+                htmlFor="csv-upload" 
+                className={`btn-primary text-xs cursor-pointer ${uploadMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {uploadMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                {uploadMutation.isPending ? 'Uploading...' : 'Upload CSV'}
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-xs text-red-400 font-medium">{stats.criticalAlerts} critical</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-navy-700 border border-white/5">
+              <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs text-gray-400">{stats.totalTransactions} total</span>
+            </div>
+            
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-medium text-xs transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Transaction
+            </button>
+>>>>>>> origin
           </div>
 
           {/* Stats - Rendered when available */}
@@ -162,6 +214,9 @@ export default function Transactions() {
 
       {/* Trail modal */}
       <TransactionTrail />
+
+      {/* Manual Entry modal */}
+      {isModalOpen && <AddTransactionModal onClose={() => setIsModalOpen(false)} />}
     </div>
   );
 }

@@ -1,12 +1,5 @@
 /**
  * db/seed.ts
- *
- * Seeds Neo4j from the 6 CSV files in /seed.
- * Uses MERGE so the script is fully idempotent (safe to re-run).
- *
- * Run standalone:  bun run db/seed.ts
- * Or call seedAll() programmatically after applySchema().
- *
  * CSV → Neo4j mapping
  * ───────────────────────────────────────────────────────
  * companies.csv       → (:Company) nodes
@@ -20,8 +13,8 @@
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
 import { readFileSync } from 'fs';
-import { connectNeo4j, closeNeo4j, runWrite } from '../lib/neo4j/neo4j';
-import { applySchema } from '../lib/neo4j/schema';
+import { connectNeo4j, closeNeo4j, runWrite } from '../lib/neo4j/neo4j.ts';
+import { applySchema } from '../lib/neo4j/schema.ts';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

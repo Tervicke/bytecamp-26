@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAmlStore } from '../store/aml.store';
 import DangerBadge from '../components/transactions/DangerBadge';
-import { Building2, User, CreditCard, AlertTriangle, Globe, Hash, TrendingUp } from 'lucide-react';
+import AddEntityModal from '../components/forms/AddEntityModal';
+import { Building2, User, CreditCard, AlertTriangle, Globe, Hash, TrendingUp, Plus } from 'lucide-react';
 
 const TABS = [
   { id: 'companies', label: 'Companies', icon: Building2 },
@@ -14,6 +15,7 @@ const TABS = [
 export default function Entities() {
   const { entityTab, setEntityTab } = useAmlStore();
   const [flagFilter, setFlagFilter] = useState('ALL');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: companies, isLoading: cLoading } = useQuery({ queryKey: ['companies'], queryFn: api.getCompanies });
   const { data: persons, isLoading: pLoading } = useQuery({ queryKey: ['persons'], queryFn: api.getPersons });
@@ -66,7 +68,17 @@ export default function Entities() {
             {f}
           </button>
         ))}
-        <span className="ml-auto text-xs text-gray-500">{sortedFiltered.length} entities</span>
+        
+        <div className="ml-auto flex items-center gap-4 text-xs">
+           <span className="text-gray-500">{sortedFiltered.length} entities</span>
+           <button 
+             onClick={() => setIsModalOpen(true)}
+             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-medium transition-colors"
+           >
+             <Plus className="w-3.5 h-3.5" />
+             Add {entityTab === 'companies' ? 'Company' : entityTab === 'persons' ? 'Person' : 'Account'}
+           </button>
+        </div>
       </div>
 
       {/* Cards grid */}
@@ -82,6 +94,10 @@ export default function Entities() {
             <EntityCard key={entity.id} entity={entity} type={entityTab} />
           ))}
         </div>
+      )}
+
+      {isModalOpen && (
+        <AddEntityModal type={entityTab} onClose={() => setIsModalOpen(false)} />
       )}
     </div>
   );
