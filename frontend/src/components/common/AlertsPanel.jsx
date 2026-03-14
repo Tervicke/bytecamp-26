@@ -5,12 +5,14 @@ import DangerBadge from '../transactions/DangerBadge';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function AlertsPanel({ limit = 6 }) {
-  const { data: flags, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['flags'],
-    queryFn: api.getFlags,
+    queryFn: () => api.getFlags({ limit }),
   });
 
-  const recentFlags = flags?.slice(0, limit) || [];
+  const flags = data?.flags || [];
+  const total = data?.total || 0;
+  const recentFlags = flags;
 
   return (
     <div className="card h-full flex flex-col">
@@ -19,7 +21,7 @@ export default function AlertsPanel({ limit = 6 }) {
           <AlertTriangle className="w-4 h-4 text-orange-400" />
           <h3 className="text-sm font-semibold text-white">Recent Alerts</h3>
         </div>
-        <span className="badge-critical">{flags?.length || 0} active</span>
+        <span className="badge-critical">{total} active</span>
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto">

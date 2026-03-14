@@ -42,7 +42,40 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
         : [],
     }));
 
-    // Process in batches to balance performance and connection pool limits
+    // Format dates for Neo4j
+    const cypherPayload = parsedTransactions.map(t => ({
+      ...t,
+      txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
+      flagLevel: 'NONE',
+      isSuspicious: false,
+      flagReasons: [],
+    }));
+
+    // 1. Initial Insert: Save all transactions to Neo4j first so rule queries can see them
+    const insertQuery = `
+      UNWIND $transactions AS r
+      MERGE (from:BankAccount {id: r.fromAccountId})
+      MERGE (to:BankAccount {id: r.toAccountId})
+      MERGE (from)-[tr:TRANSFERS_TO {id: r.id}]->(to)
+      SET tr.amount          = r.amount,
+          tr.currency        = r.currency,
+          tr.txnDate         = r.txnDate,
+          tr.txnType         = r.txnType,
+          tr.description     = r.description,
+          tr.referenceNumber = r.referenceNumber,
+          tr.isSuspicious    = false,
+          tr.flagLevel       = 'NONE',
+          tr.flagReasons     = []
+      RETURN count(*) AS inserted
+    `;
+    console.log("CYPHER PAYLOAD LENGTH:", cypherPayload.length);
+    console.log("FIRST ELEMENT:", JSON.stringify(cypherPayload[0]));
+    const insRes = await runWrite(insertQuery, { transactions: cypherPayload });
+    console.log("INSERT RESULT:", insRes);
+
+    // 2. Evaluate rules against the now-populated database
+    // Process sequentially or in batches so that earlier transactions' flags don't affect this,
+    // actually rules only read the graph structure, which is fully persisted now.
     const BATCH_SIZE = 10;
     const evaluated = [];
     for (let i = 0; i < parsedTransactions.length; i += BATCH_SIZE) {
@@ -54,32 +87,25 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
     }
 
     const transactionsWithFlags = evaluated.map((r) => r.transaction);
+    const flaggedTransactions = transactionsWithFlags.filter(t => t.flagLevel !== 'NONE');
+    console.log("FLAGGED TRANSACTIONS COUNT:", flaggedTransactions.length);
 
-    // Persist to Neo4j
-    const query = `
-      UNWIND $transactions AS r
-      MATCH (from:BankAccount {id: r.fromAccountId})
-      MATCH (to:BankAccount {id: r.toAccountId})
-      MERGE (from)-[tr:TRANSFERS_TO {id: r.id}]->(to)
-      SET tr.amount          = r.amount,
-          tr.currency        = r.currency,
-          tr.txnDate         = r.txnDate,
-          tr.txnType         = r.txnType,
-          tr.description     = r.description,
-          tr.referenceNumber = r.referenceNumber,
-          tr.isSuspicious    = r.isSuspicious,
-          tr.flagLevel       = r.flagLevel,
-          tr.flagReasons     = r.flagReasons
-    `;
-
-    // Re-format txnDate to ISO string because Neo4j driver rejects raw JS Date objects sometimes,
-    // and we want it to be compatible with how seeding handled it.
-    const cypherPayload = transactionsWithFlags.map(t => ({
-      ...t,
-      txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
-    }));
-
-    await runWrite(query, { transactions: cypherPayload });
+    // 3. Update flags for transactions that triggered rules
+    if (flaggedTransactions.length > 0) {
+      const updateQuery = `
+        UNWIND $transactions AS r
+        MATCH ()-[tr:TRANSFERS_TO {id: r.id}]->()
+        SET tr.isSuspicious = r.isSuspicious,
+            tr.flagLevel    = r.flagLevel,
+            tr.flagReasons  = r.flagReasons
+        RETURN count(tr) AS updated
+      `;
+      const updatePayload = flaggedTransactions.map(t => ({
+        ...t,
+        txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
+      }));
+      await runWrite(updateQuery, { transactions: updatePayload });
+    }
 
     res.status(200).json({
       message: "CSV file parsed, rules evaluated, and transactions saved successfully",

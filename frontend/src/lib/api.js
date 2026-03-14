@@ -340,16 +340,19 @@ export const api = {
     return fetchApi('/graph');
   },
 
-  async getCompanies() { 
-    return fetchApi('/entities/companies');
+  async getCompanies(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/companies${query ? `?${query}` : ''}`);
   },
   
-  async getPersons() { 
-    return fetchApi('/entities/persons'); 
+  async getPersons(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/persons${query ? `?${query}` : ''}`); 
   },
   
-  async getBankAccounts() { 
-    return fetchApi('/entities/accounts'); 
+  async getBankAccounts(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/accounts${query ? `?${query}` : ''}`); 
   },
   
   async getEntity(id) {
@@ -368,8 +371,13 @@ export const api = {
     return fetchApi('/entities/persons', { method: 'POST', body: JSON.stringify(data) });
   },
 
-  async getFlags() { 
-    return fetchApi('/flags'); 
+  async getFlags(params = {}) { 
+    const qs = new URLSearchParams();
+    if (params.type) qs.append('type', params.type);
+    if (params.page) qs.append('page', params.page);
+    if (params.limit) qs.append('limit', params.limit);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return fetchApi(`/flags${query}`); 
   },
   
   async runAnalysis() {
@@ -385,5 +393,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ entityId, flagLevel })
     });
+  },
+
+  async searchEntities(q, type = 'ALL') {
+    return fetchApi(`/flags/search?q=${encodeURIComponent(q)}&type=${type}`);
   }
 };

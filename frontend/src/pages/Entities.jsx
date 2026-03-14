@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { useAmlStore } from '../store/aml.store';
 import DangerBadge from '../components/transactions/DangerBadge';
 import AddEntityModal from '../components/forms/AddEntityModal';
-import { Building2, User, CreditCard, AlertTriangle, Globe, Hash, TrendingUp, Plus } from 'lucide-react';
+import { Building2, User, CreditCard, AlertTriangle, Globe, Hash, TrendingUp, Plus, Search } from 'lucide-react';
 
 const TABS = [
   { id: 'companies', label: 'Companies', icon: Building2 },
@@ -16,28 +16,48 @@ export default function Entities() {
   const { entityTab, setEntityTab } = useAmlStore();
   const [flagFilter, setFlagFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 9; // Grid layout fits 9 well
 
-  const { data: companies, isLoading: cLoading } = useQuery({ queryKey: ['companies'], queryFn: api.getCompanies });
-  const { data: persons, isLoading: pLoading } = useQuery({ queryKey: ['persons'], queryFn: api.getPersons });
-  const { data: accounts, isLoading: aLoading } = useQuery({ queryKey: ['accounts'], queryFn: api.getBankAccounts });
+  const { data: companiesData, isLoading: cLoading } = useQuery({ 
+    queryKey: ['companies', page], 
+    queryFn: () => api.getCompanies({ page, limit }) 
+  });
+  const { data: personsData, isLoading: pLoading } = useQuery({ 
+    queryKey: ['persons', page], 
+    queryFn: () => api.getPersons({ page, limit }) 
+  });
+  const { data: accountsData, isLoading: aLoading } = useQuery({ 
+    queryKey: ['accounts', page], 
+    queryFn: () => api.getBankAccounts({ page, limit }) 
+  });
 
-  const currentData = entityTab === 'companies' ? companies : entityTab === 'persons' ? persons : accounts;
+  const currentResponse = entityTab === 'companies' ? companiesData : entityTab === 'persons' ? personsData : accountsData;
+  const currentData = currentResponse?.data || [];
+  const total = currentResponse?.total || 0;
   const isLoading = entityTab === 'companies' ? cLoading : entityTab === 'persons' ? pLoading : aLoading;
 
-  const filtered = (currentData || []).filter(e => flagFilter === 'ALL' || e.flagLevel === flagFilter);
+  const filtered = currentData.filter(e => flagFilter === 'ALL' || e.flagLevel === flagFilter);
   const sortedFiltered = [...filtered].sort((a, b) => {
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4 };
     return (order[a.flagLevel] ?? 5) - (order[b.flagLevel] ?? 5);
   });
 
+  const totalPages = Math.ceil(total / limit);
+
+  const handleTabChange = (id) => {
+    setEntityTab(id);
+    setPage(1); // Reset to first page on tab change
+  };
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in flex flex-col min-h-full">
       {/* Tabs */}
       <div className="flex items-center gap-1 p-1 bg-navy-800 rounded-xl border border-white/5 w-fit">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => setEntityTab(id)}
+            onClick={() => handleTabChange(id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               entityTab === id
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
@@ -49,7 +69,7 @@ export default function Entities() {
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               entityTab === id ? 'bg-white/20' : 'bg-white/5'
             }`}>
-              {id === 'companies' ? companies?.length : id === 'persons' ? persons?.length : accounts?.length}
+              {id === 'companies' ? companiesData?.total : id === 'persons' ? personsData?.total : accountsData?.total}
             </span>
           </button>
         ))}
@@ -70,7 +90,7 @@ export default function Entities() {
         ))}
         
         <div className="ml-auto flex items-center gap-4 text-xs">
-           <span className="text-gray-500">{sortedFiltered.length} entities</span>
+           <span className="text-gray-500">Showing {sortedFiltered.length} of {total} entities</span>
            <button 
              onClick={() => setIsModalOpen(true)}
              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-medium transition-colors"
@@ -82,17 +102,49 @@ export default function Entities() {
       </div>
 
       {/* Cards grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card h-36 animate-pulse bg-white/5" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedFiltered.map(entity => (
-            <EntityCard key={entity.id} entity={entity} type={entityTab} />
-          ))}
+      <div className="flex-1">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="card h-36 animate-pulse bg-white/5" />
+            ))}
+          </div>
+        ) : sortedFiltered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <Search className="w-12 h-12 mb-4 opacity-20" />
+            <p className="text-sm">No {entityTab} found matching filters</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedFiltered.map(entity => (
+              <EntityCard key={entity.id} entity={entity} type={entityTab} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex items-center justify-between py-4 mt-auto border-t border-white/5">
+          <div className="text-xs text-gray-500">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-white/5 text-xs text-gray-400 font-medium hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-white/5 text-xs text-gray-400 font-medium hover:bg-white/5 disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 
@@ -134,7 +186,9 @@ function EntityCard({ entity, type }) {
               'text-gray-400'
             }`} />
           </div>
-          <h3 className="text-sm font-semibold text-white truncate">{entity.name}</h3>
+          <h3 className="text-sm font-semibold text-white truncate">
+            {entity.name || entity.accountNumber || entity.bankName || 'Unknown Entity'}
+          </h3>
         </div>
         <DangerBadge level={entity.flagLevel} />
       </div>
