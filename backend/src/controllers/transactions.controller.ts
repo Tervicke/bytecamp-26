@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { parse } from "csv-parse/sync";
 import type { Transaction } from "../types/transactions.js";
-import { evaluateAllTransactionRules } from "../services/ruleEngine.service.js";
+import { applyAllRulesToTransaction } from "../services/ruleEngine.service.js";
 
 export const uploadTransactionsCSV = async (req: Request, res: Response) => {
   try {
@@ -41,16 +41,15 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
     }));
 
     const evaluated = await Promise.all(
-      parsedTransactions.map(async (txn) => ({
-        transaction: txn,
-        rules: await evaluateAllTransactionRules(txn),
-      }))
+      parsedTransactions.map(async (txn) => applyAllRulesToTransaction(txn))
     );
+
+    const transactionsWithFlags = evaluated.map((r) => r.transaction);
 
     res.status(200).json({
       message: "CSV file parsed and rules evaluated successfully",
-      count: parsedTransactions.length,
-      results: evaluated,
+      count: transactionsWithFlags.length,
+      transactions: transactionsWithFlags,
     });
   } catch (error: any) {
     console.error("Error parsing CSV:", error);
