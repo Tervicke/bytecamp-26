@@ -19,7 +19,8 @@ const CONSTRAINTS: string[] = [
    FOR (p:Person) REQUIRE p.id IS UNIQUE`,
 
     // BankAccount — id, accountNumber, bankName, bankCountry,
-    //   currency, balance, companyId, openedDate, accountType, swiftCode, flagLevel
+    //   currency, balance, companyId, openedDate, accountType, swiftCode,
+    //   flagLevel, flagReasons
     `CREATE CONSTRAINT bank_account_id_unique IF NOT EXISTS
    FOR (b:BankAccount) REQUIRE b.id IS UNIQUE`,
 
@@ -60,6 +61,13 @@ const INDEXES: string[] = [
 
     `CREATE INDEX bank_account_currency IF NOT EXISTS
    FOR (b:BankAccount) ON (b.currency)`,
+
+    // FlagEvent lookups — fast entity lookups and audit trail queries
+    `CREATE INDEX flag_event_entity_id IF NOT EXISTS
+   FOR (fe:FlagEvent) ON (fe.entityId)`,
+
+    `CREATE INDEX flag_event_triggered_by IF NOT EXISTS
+   FOR (fe:FlagEvent) ON (fe.triggeredBy)`,
 
 ];
 

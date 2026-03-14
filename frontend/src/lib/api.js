@@ -114,19 +114,19 @@ export const api = {
     return data;
   },
 
-  async getCompanies() { 
-    const data = await fetchApi('/entities/companies'); // Example endpoint mapping
-    return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;
+  async getCompanies(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/companies${query ? `?${query}` : ''}`);
   },
   
-  async getPersons() { 
-    const data = await fetchApi('/entities/persons'); 
-    return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;
+  async getPersons(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/persons${query ? `?${query}` : ''}`); 
   },
   
-  async getBankAccounts() { 
-    const data = await fetchApi('/entities/accounts'); 
-    return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;
+  async getBankAccounts(params = {}) { 
+    const query = new URLSearchParams(params).toString();
+    return fetchApi(`/entities/accounts${query ? `?${query}` : ''}`); 
   },
   
   async getEntity(id) {
@@ -146,9 +146,13 @@ export const api = {
     return fetchApi('/entities/persons', { method: 'POST', body: JSON.stringify(data) });
   },
 
-  async getFlags() { 
-    const data = await fetchApi('/flags'); 
-    return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;
+  async getFlags(params = {}) { 
+    const qs = new URLSearchParams();
+    if (params.type) qs.append('type', params.type);
+    if (params.page) qs.append('page', params.page);
+    if (params.limit) qs.append('limit', params.limit);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return fetchApi(`/flags${query}`); 
   },
   
   async runAnalysis() {
@@ -164,5 +168,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ entityId, flagLevel })
     });
+  },
+
+  async searchEntities(q, type = 'ALL') {
+    return fetchApi(`/flags/search?q=${encodeURIComponent(q)}&type=${type}`);
   }
 };

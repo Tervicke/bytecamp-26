@@ -40,28 +40,21 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
         flagReasons: [],
       }));
 
-    if (parsedTransactions.length === 0) {
-      res.status(400).json({ message: "No valid transactions found in CSV." });
-      return;
-    }
+    // Format dates for Neo4j
+    const cypherPayload = parsedTransactions.map(t => ({
+      ...t,
+      txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
+      flagLevel: 'NONE',
+      isSuspicious: false,
+      flagReasons: [],
+    }));
 
-    // ─── Step 1: Wipe old transactions and insert new ones ─────────────
-    // As requested, delete all existing transactions to avoid overriding issues,
-    // providing a fresh slate for the new CSV upload.
-    const wipeQuery = `
-      MATCH ()-[r:TRANSFERS_TO]->()
-      DELETE r
-    `;
-    await runWrite(wipeQuery, {});
-
+    // 1. Initial Insert: Save all transactions to Neo4j first so rule queries can see them
     const insertQuery = `
       UNWIND $transactions AS r
       MERGE (from:BankAccount {id: r.fromAccountId})
-      ON CREATE SET from.accountNumber = r.fromAccountName
       MERGE (to:BankAccount {id: r.toAccountId})
-      ON CREATE SET to.accountNumber = r.toAccountName
-      
-      CREATE (from)-[tr:TRANSFERS_TO {id: r.id}]->(to)
+      MERGE (from)-[tr:TRANSFERS_TO {id: r.id}]->(to)
       SET tr.amount          = r.amount,
           tr.currency        = r.currency,
           tr.txnDate         = r.txnDate,
@@ -71,20 +64,18 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
           tr.isSuspicious    = false,
           tr.flagLevel       = 'NONE',
           tr.flagReasons     = []
+      RETURN count(*) AS inserted
     `;
+    console.log("CYPHER PAYLOAD LENGTH:", cypherPayload.length);
+    console.log("FIRST ELEMENT:", JSON.stringify(cypherPayload[0]));
+    const insRes = await runWrite(insertQuery, { transactions: cypherPayload });
+    console.log("INSERT RESULT:", insRes);
 
-    const upsertPayload = parsedTransactions.map((t) => ({
-      ...t,
-      txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
-    }));
-
-    await runWrite(insertQuery, { transactions: upsertPayload });
-
-    // ─── Step 2: Run rule engine against the live graph ───────────────────
-    // Now that transactions are in Neo4j, cycle detection can find real paths.
-    const BATCH_SIZE = 5;
-    const evaluated: Array<{ transaction: Transaction & { isSuspicious: boolean; flagLevel: string; flagReasons: string[]; severity?: number } }> = [];
-
+    // 2. Evaluate rules against the now-populated database
+    // Process sequentially or in batches so that earlier transactions' flags don't affect this,
+    // actually rules only read the graph structure, which is fully persisted now.
+    const BATCH_SIZE = 10;
+    const evaluated = [];
     for (let i = 0; i < parsedTransactions.length; i += BATCH_SIZE) {
       const batch = parsedTransactions.slice(i, i + BATCH_SIZE);
       const results = await Promise.all(
@@ -94,24 +85,25 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
     }
 
     const transactionsWithFlags = evaluated.map((r) => r.transaction);
+    const flaggedTransactions = transactionsWithFlags.filter(t => t.flagLevel !== 'NONE');
+    console.log("FLAGGED TRANSACTIONS COUNT:", flaggedTransactions.length);
 
-    // ─── Step 3: Write detected flags back to Neo4j ───────────────────────
-    const flagUpdateQuery = `
-      UNWIND $transactions AS r
-      MATCH ()-[tr:TRANSFERS_TO {id: r.id}]->()
-      SET tr.isSuspicious = r.isSuspicious,
-          tr.flagLevel    = r.flagLevel,
-          tr.flagReasons  = r.flagReasons
-    `;
-
-    const flagPayload = transactionsWithFlags.map((t) => ({
-      id: t.id,
-      isSuspicious: t.isSuspicious,
-      flagLevel: t.flagLevel,
-      flagReasons: t.flagReasons,
-    }));
-
-    await runWrite(flagUpdateQuery, { transactions: flagPayload });
+    // 3. Update flags for transactions that triggered rules
+    if (flaggedTransactions.length > 0) {
+      const updateQuery = `
+        UNWIND $transactions AS r
+        MATCH ()-[tr:TRANSFERS_TO {id: r.id}]->()
+        SET tr.isSuspicious = r.isSuspicious,
+            tr.flagLevel    = r.flagLevel,
+            tr.flagReasons  = r.flagReasons
+        RETURN count(tr) AS updated
+      `;
+      const updatePayload = flaggedTransactions.map(t => ({
+        ...t,
+        txnDate: t.txnDate instanceof Date ? t.txnDate.toISOString() : t.txnDate,
+      }));
+      await runWrite(updateQuery, { transactions: updatePayload });
+    }
 
     res.status(200).json({
       message: "Transactions saved and analysed successfully",
