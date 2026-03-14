@@ -25,7 +25,8 @@ await connectNeo4j();
 app.use('/api/auth', authRoutes);
 
 // Protected routes
-app.use("/api/transactions", verifyToken, transactionsRoutes);
+// app.use("/api/transactions", verifyToken, transactionsRoutes);
+app.use("/api/transactions", transactionsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server running with Bun + Express + TypeScript");
