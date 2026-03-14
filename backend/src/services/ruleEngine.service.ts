@@ -34,11 +34,11 @@ const ALL_RULES: TransactionRule[] = [
 // ─── Core Engine ────────────────────────────────────────────────────────
 
 export const SeverityMap: Record<number, string> = {
-  6: "Critical",
-  5: "High",
-  4: "Medium",
-  3: "Low",
-  0: "None",
+  6: "CRITICAL",
+  5: "HIGH",
+  4: "MEDIUM",
+  3: "LOW",
+  0: "NONE",
 };
 
 export async function evaluateAllTransactionRules(
