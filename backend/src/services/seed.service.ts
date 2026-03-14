@@ -4,7 +4,7 @@
  * ───────────────────────────────────────────────────────
  * companies.csv       → (:Company) nodes
  * persons.csv         → (:Person) nodes
- * bank_accounts.csv   → (:BankAccount) nodes + [:HOLDS_ACCOUNT] edges
+ * bank_accounts.csv   es (:BankAccount) nodes + [:HOLDS_ACCOUNT] edges
  * ownership.csv       → [:OWNS] edges (Person → Company)
  * subsidiaries.csv    → [:SUBSIDIARY_OF] edges (Company → Company)
  * transactions.csv    → [:TRANSFERS_TO] edges only (BankAccount → BankAccount)
@@ -236,7 +236,7 @@ async function seedTransactions(): Promise<void> {
        MERGE (from)-[tr:TRANSFERS_TO {id: $id}]->(to)
        SET tr.amount          = $amount,
            tr.currency        = $currency,
-           tr.txnDate         = $txnDate,
+           tr.txnDate         = datetime($txnDate),
            tr.txnType         = $txnType,
            tr.description     = $description,
            tr.referenceNumber = $referenceNumber,
