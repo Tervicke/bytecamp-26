@@ -25,3 +25,66 @@ p013,c013,100.00,2019-10-05,nominee_shareholder,Nominee for tech founders
 p014,c018,50.00,2020-04-01,shareholder,Joint owner with Layla Hussain
 p015,c020,85.00,2017-12-20,beneficial_owner,Controlling owner Greenway
 p015,c019,20.00,2021-09-15,shareholder,Minority stake in Black Pebble
+p016,c021,100.00,2022-01-01,beneficial_owner,Sole owner
+p017,c022,100.00,2023-01-01,beneficial_owner,Founder
+p018,c023,100.00,2021-06-15,beneficial_owner,Major shareholder
+p019,c024,100.00,2022-05-01,beneficial_owner,Founder
+p020,c025,80.00,2021-11-12,beneficial_owner,Majority owner
+p021,c026,100.00,2023-01-15,beneficial_owner,Sole owner
+p022,c027,100.00,2020-08-20,beneficial_owner,Owner
+p023,c028,100.00,2019-04-10,beneficial_owner,Founder
+p024,c029,100.00,2021-02-14,beneficial_owner,Sole UBO
+p025,c030,100.00,2022-09-30,beneficial_owner,Owner
+p026,c031,100.00,2018-06-05,beneficial_owner,Founder
+p027,c032,100.00,2023-03-12,beneficial_owner,Owner
+p028,c033,100.00,2020-12-01,beneficial_owner,Owner
+p029,c034,100.00,2021-05-15,beneficial_owner,Owner
+p030,c035,100.00,2019-07-22,beneficial_owner,Owner
+p031,c036,100.00,2022-01-10,beneficial_owner,Owner
+p032,c037,100.00,2023-02-14,beneficial_owner,Owner
+p033,c038,100.00,2021-08-30,beneficial_owner,Owner
+p034,c039,100.00,2020-03-20,beneficial_owner,Owner
+p035,c040,100.00,2018-11-11,beneficial_owner,Owner
+p036,c041,100.00,2022-06-15,beneficial_owner,Owner
+p037,c042,100.00,2023-04-01,beneficial_owner,Owner
+p038,c043,100.00,2021-12-12,beneficial_owner,Owner
+p039,c044,100.00,2020-09-09,beneficial_owner,Owner
+p040,c045,100.00,2019-02-14,beneficial_owner,Owner
+p041,c046,100.00,2022-10-30,beneficial_owner,Owner
+p042,c047,100.00,2023-05-01,beneficial_owner,Owner
+p043,c048,100.00,2021-01-20,beneficial_owner,Owner
+p044,c049,100.00,2020-06-30,beneficial_owner,Owner
+p045,c050,100.00,2018-03-12,beneficial_owner,Owner
+p046,c051,100.00,2022-07-07,beneficial_owner,Owner
+p047,c052,100.00,2023-08-21,beneficial_owner,Owner
+p048,c053,100.00,2021-04-05,beneficial_owner,Owner
+p046,c054,100.00,2022-01-01,beneficial_owner,Founder
+p047,c055,80.00,2021-05-01,beneficial_owner,Majority
+p048,c056,100.00,2023-01-01,beneficial_owner,Owner
+p049,c057,100.00,2020-03-01,beneficial_owner,Owner
+p050,c058,100.00,2021-06-01,beneficial_owner,Owner
+p051,c059,100.00,2022-08-01,beneficial_owner,Owner
+p052,c060,100.00,2019-02-01,beneficial_owner,Owner
+p053,c061,100.00,2023-04-01,beneficial_owner,Owner
+p054,c062,100.00,2021-12-01,beneficial_owner,Owner
+p055,c063,100.00,2020-09-01,beneficial_owner,Owner
+p056,c064,100.00,2022-10-01,beneficial_owner,Owner
+p057,c065,100.00,2023-05-01,beneficial_owner,Owner
+p058,c066,100.00,2021-02-01,beneficial_owner,Owner
+p059,c067,100.00,2020-07-01,beneficial_owner,Owner
+p060,c068,100.00,2018-04-01,beneficial_owner,Owner
+p061,c069,100.00,2022-11-01,beneficial_owner,Owner
+p062,c070,100.00,2021-03-01,beneficial_owner,Owner
+p063,c071,100.00,2023-06-01,beneficial_owner,Owner
+p064,c072,100.00,2020-10-01,beneficial_owner,Owner
+p065,c073,100.00,2019-03-01,beneficial_owner,Owner
+p066,c074,100.00,2022-01-01,beneficial_owner,Owner
+p067,c075,100.00,2021-08-01,beneficial_owner,Owner
+p068,c076,100.00,2020-04-01,beneficial_owner,Owner
+p069,c077,100.00,2018-12-01,beneficial_owner,Owner
+p070,c078,100.00,2023-02-01,beneficial_owner,Owner
+p071,c079,100.00,2021-09-01,beneficial_owner,Owner
+p072,c080,100.00,2022-12-01,beneficial_owner,Owner
+p073,c081,100.00,2019-06-01,beneficial_owner,Owner
+p074,c082,100.00,2020-11-01,beneficial_owner,Owner
+p075,c083,100.00,2021-07-01,beneficial_owner,Owner
