@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 FROM oven/bun:1.2.21-alpine
+=======
+FROM oven/bun:1.2.21-alpin
+>>>>>>> 2bae5ae57b9b1215a436624262450cd232c5c5c7
 WORKDIR /var/www/bytecamp-server
 
 COPY ./backend/package.json ./package.json
@@ -9,7 +13,18 @@ COPY ./backend ./
 # Install all workspace deps
 RUN bun install --lockfile
 
+<<<<<<< HEAD
 WORKDIR /var/www/bytecamp-server
 EXPOSE 3000
 
 CMD ["bun", "run", "src/index.ts"]
+=======
+# Build only server and its dependencies
+RUN bun run db:generate
+RUN bun run build
+
+WORKDIR var/www/bytecamp-server
+EXPOSE 3000
+
+CMD ["bun", "start"]
+>>>>>>> 2bae5ae57b9b1215a436624262450cd232c5c5c7

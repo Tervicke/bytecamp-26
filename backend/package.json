@@ -1,0 +1,36 @@
+<<<<<<< HEAD
+=======
+{
+  "name": "server",
+  "module": "server.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun run tsc",
+    "start": "bun run src/index.ts",
+    "db:generate": "bun run src/db/generate.ts"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "csv-parse": "^6.1.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "neo4j-driver": "^6.0.1",
+    "multer": "^2.1.1",
+    "pg": "^8.20.0"
+  }
+}
+>>>>>>> 2bae5ae57b9b1215a436624262450cd232c5c5c7

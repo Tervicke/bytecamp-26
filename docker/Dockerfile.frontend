@@ -14,4 +14,8 @@ RUN bun run build
 WORKDIR /var/www/bytecamp-web
 EXPOSE 5173
 
+<<<<<<< HEAD
 CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "5173"]
+=======
+CMD ["bun", "start"]
+>>>>>>> 2bae5ae57b9b1215a436624262450cd232c5c5c7
