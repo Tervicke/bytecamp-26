@@ -21,14 +21,14 @@ export const getFlags = async (req: Request, res: Response): Promise<void> => {
     const type = (req.query.type as string) || 'ALL';
     const pageParam = req.query.page;
     const limitParam = req.query.limit;
-    
+
     // Defensive parsing
     let page = parseInt(String(pageParam));
     if (isNaN(page) || page < 1) page = 1;
-    
+
     let limit = parseInt(String(limitParam));
     if (isNaN(limit) || limit < 1) limit = 10;
-    
+
     const skip = (page - 1) * limit;
 
     // 1. Get counts for ALL flagged entities (for breakdown/tabs)
@@ -219,7 +219,7 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
            count(t) AS total,
            count(CASE WHEN COALESCE(t.flagLevel, 'NONE') <> 'NONE' THEN 1 END) AS flagged,
            count(CASE WHEN t.flagLevel = 'CRITICAL' THEN 1 END) AS critical`;
-    
+
     const entityStatsQuery = `MATCH (n)
          WHERE (n:Company OR n:Person OR n:BankAccount) 
            AND (COALESCE(n.flagLevel, 'NONE') <> 'NONE' OR EXISTS { MATCH (fe:FlagEvent {entityId: n.id, resolvedAt: null}) })
@@ -229,15 +229,34 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
          WHERE (n:Company OR n:Person OR n:BankAccount)
            AND 'cycle_detected' IN n.flagReasons
          RETURN count(n) AS activeCycles`;
-    
-    const [txnStats, entityStats, cycleStats, runStats] = await Promise.all([
+
+    const topFlaggedQuery = `MATCH (n)
+         WHERE (n:Company OR n:Person OR n:BankAccount)
+           AND COALESCE(n.flagLevel, 'NONE') <> 'NONE'
+         RETURN 
+           n.id AS id,
+           COALESCE(n.name, n.accountNumber, n.id) AS name,
+           labels(n)[0] AS type,
+           n.flagLevel AS flagLevel
+         ORDER BY 
+           CASE n.flagLevel 
+             WHEN 'CRITICAL' THEN 1 
+             WHEN 'HIGH' THEN 2 
+             WHEN 'MEDIUM' THEN 3 
+             WHEN 'LOW' THEN 4 
+             ELSE 5 
+           END ASC
+         LIMIT 5`;
+
+    const [txnStats, entityStats, cycleStats, runStats, topFlagged] = await Promise.all([
       runQuery(txnStatsQuery),
       runQuery(entityStatsQuery),
       runQuery(activeCyclesQuery),
-      runQuery(`MATCH (fe:FlagEvent) WHERE fe.triggeredBy <> 'manual_override' RETURN count(fe) AS analysisRuns, max(fe.createdAt) AS lastAnalysis`)
+      runQuery(`MATCH (fe:FlagEvent) WHERE fe.triggeredBy <> 'manual_override' RETURN count(fe) AS analysisRuns, max(fe.createdAt) AS lastAnalysis`),
+      runQuery(topFlaggedQuery)
     ]);
 
-    console.log("DASHBOARD STATS RAW:", { txnStats, entityStats, cycleStats, runStats });
+    console.log("DASHBOARD STATS RAW:", { txnStats, entityStats, cycleStats, runStats, topFlagged });
 
     const ts = txnStats[0] as any ?? {};
     const es = entityStats[0] as any ?? {};
@@ -265,6 +284,22 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
       if (r.labels.includes('BankAccount')) flaggedByType.BankAccount += count;
     });
 
+    // Risk distribution
+    const riskRecords = await runQuery<{ flagLevel: string; count: any }>(
+      `MATCH (n)
+       WHERE (n:Company OR n:Person OR n:BankAccount)
+         AND COALESCE(n.flagLevel, 'NONE') <> 'NONE'
+       RETURN n.flagLevel AS flagLevel, count(n) AS count`
+    );
+    const riskDistribution = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    riskRecords.forEach(r => {
+      const level = (r as any).flagLevel;
+      const count = Number((r as any).count.low ?? (r as any).count);
+      if (level in riskDistribution) {
+        (riskDistribution as any)[level] = count;
+      }
+    });
+
     res.json({
       totalTransactions: Number(ts.total ?? 0),
       flaggedTransactions: Number(ts.flagged ?? 0),
@@ -272,6 +307,13 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
       activeCycles: Number(cs.activeCycles ?? 0),
       entitiesFlagged: Number(es.entitiesFlagged ?? 0),
       flaggedByType,
+      riskDistribution,
+      topFlaggedEntities: topFlagged.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        flagLevel: r.flagLevel
+      })),
       analysisRuns: Number(rs.analysisRuns ?? 0),
       lastAnalysis: rs.lastAnalysis ?? null,
     });

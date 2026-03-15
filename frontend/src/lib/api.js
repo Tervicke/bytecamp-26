@@ -14,7 +14,7 @@ async function fetchApi(endpoint, options = {}) {
     'Content-Type': 'application/json',
     ...options.headers,
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -58,18 +58,24 @@ export const api = {
     const params = new URLSearchParams();
     if (filters.flagLevel && filters.flagLevel !== 'ALL') params.append('flagLevel', filters.flagLevel);
     if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    
+
     // The backend provides transactions via /transactions
     const data = await fetchApi(`/transactions${qs}`);
-    // Normalize flagLevels
-    return Array.isArray(data) ? data.map(normalizeFlagLevel) : data;
+
+    // The backend now returns { transactions, totalCount }
+    if (data && data.transactions) {
+      data.transactions = data.transactions.map(normalizeFlagLevel);
+    }
+    return data;
   },
 
   async uploadTransactionsCSV(file) {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const token = localStorage.getItem('auth_token');
     const headers = {};
     if (token) {
@@ -82,7 +88,7 @@ export const api = {
       body: formData,
       headers
     });
-    
+
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
@@ -92,13 +98,13 @@ export const api = {
     if (!response.ok) {
       throw new Error(`Upload failed: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (data.transactions) {
       data.transactions = data.transactions.map(normalizeFlagLevel);
     }
-    
+
     return data;
   },
 
@@ -114,21 +120,21 @@ export const api = {
     return data;
   },
 
-  async getCompanies(params = {}) { 
+  async getCompanies(params = {}) {
     const query = new URLSearchParams(params).toString();
     return fetchApi(`/entities/companies${query ? `?${query}` : ''}`);
   },
-  
-  async getPersons(params = {}) { 
+
+  async getPersons(params = {}) {
     const query = new URLSearchParams(params).toString();
-    return fetchApi(`/entities/persons${query ? `?${query}` : ''}`); 
+    return fetchApi(`/entities/persons${query ? `?${query}` : ''}`);
   },
-  
-  async getBankAccounts(params = {}) { 
+
+  async getBankAccounts(params = {}) {
     const query = new URLSearchParams(params).toString();
-    return fetchApi(`/entities/accounts${query ? `?${query}` : ''}`); 
+    return fetchApi(`/entities/accounts${query ? `?${query}` : ''}`);
   },
-  
+
   async getEntity(id) {
     const data = await fetchApi(`/entities/${id}`);
     return normalizeFlagLevel(data);
@@ -146,23 +152,23 @@ export const api = {
     return fetchApi('/entities/persons', { method: 'POST', body: JSON.stringify(data) });
   },
 
-  async getFlags(params = {}) { 
+  async getFlags(params = {}) {
     const qs = new URLSearchParams();
     if (params.type) qs.append('type', params.type);
     if (params.page) qs.append('page', params.page);
     if (params.limit) qs.append('limit', params.limit);
     const query = qs.toString() ? `?${qs.toString()}` : '';
-    return fetchApi(`/flags${query}`); 
+    return fetchApi(`/flags${query}`);
   },
-  
+
   async runAnalysis() {
     return fetchApi('/analysis/run', { method: 'POST' });
   },
 
-  async getVolumeChart() { 
-    return fetchApi('/dashboard/volume'); 
+  async getVolumeChart() {
+    return fetchApi('/dashboard/volume');
   },
-  
+
   async overrideFlagLevel(entityId, flagLevel) {
     return fetchApi(`/flags/override`, {
       method: 'POST',
