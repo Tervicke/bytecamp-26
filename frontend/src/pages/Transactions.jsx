@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useAmlStore } from '../store/aml.store';
 import TransactionTable from '../components/transactions/TransactionTable';
 import TransactionTrail from '../components/transactions/TransactionTrail';
-import { Search, Filter, AlertTriangle, ArrowLeftRight, Upload, Loader2, CheckCircle } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import AddTransactionModal from '../components/forms/AddTransactionModal';
+import { Search, Filter, AlertTriangle, ArrowLeftRight, Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
 const FLAG_FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
@@ -19,6 +20,7 @@ const FLAG_COLORS = {
 export default function Transactions() {
   const { flagFilter, setFlagFilter, searchQuery, setSearchQuery, isTrailOpen } = useAmlStore();
   const [localSearch, setLocalSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const [uploadStatus, setUploadStatus] = useState(null); // null, 'success', 'error'
 
@@ -119,6 +121,14 @@ export default function Transactions() {
               <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
               <span className="text-xs text-gray-400">{stats.totalTransactions} total</span>
             </div>
+            
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-medium text-xs transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Transaction
+            </button>
           </div>
         )}
       </div>
@@ -171,6 +181,9 @@ export default function Transactions() {
 
       {/* Trail modal */}
       <TransactionTrail />
+
+      {/* Manual Entry modal */}
+      {isModalOpen && <AddTransactionModal onClose={() => setIsModalOpen(false)} />}
     </div>
   );
 }

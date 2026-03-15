@@ -93,25 +93,27 @@ export default function Dashboard() {
       </div>
 
       {/* Analysis alert banner */}
-      <div className="flex items-center justify-between p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <div>
-            <p className="text-sm font-semibold text-red-300">2 Active Circular Fund Flow Cycles Detected</p>
-            <p className="text-xs text-red-400/60">
-              Nexus Holdings → Orion Wealth → Emerald Coast → Titan Resources → Nexus Holdings
-            </p>
+      {stats?.activeCycles > 0 && (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <div>
+              <p className="text-sm font-semibold text-red-300">{stats.activeCycles} Active Circular Fund Flow Cycle{stats.activeCycles === 1 ? '' : 's'} Detected</p>
+              <p className="text-xs text-red-400/60">
+                Please review the flagged entities and transaction graph for details.
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleRunAnalysis}
+            disabled={isAnalysisRunning}
+            className="btn-danger text-xs whitespace-nowrap"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isAnalysisRunning ? 'animate-spin' : ''}`} />
+            {isAnalysisRunning ? 'Running...' : 'Re-run Analysis'}
+          </button>
         </div>
-        <button
-          onClick={handleRunAnalysis}
-          disabled={isAnalysisRunning}
-          className="btn-danger text-xs whitespace-nowrap"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isAnalysisRunning ? 'animate-spin' : ''}`} />
-          {isAnalysisRunning ? 'Running...' : 'Re-run Analysis'}
-        </button>
-      </div>
+      )}
 
       {/* Chart + Alerts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
