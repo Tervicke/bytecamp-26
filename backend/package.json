@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun run tsc"
+    "build": "bun run tsc",
+    "start": "bun run dist/index.js",
+    "db:generate": "bun run src/db/generate.ts"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

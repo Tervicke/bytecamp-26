@@ -3,6 +3,7 @@ import { parse } from "csv-parse/sync";
 import type { Transaction } from "../types/transactions.js";
 import { applyAllRulesToTransaction } from "../services/ruleEngine.service.js";
 import { runWrite, runRead } from "../lib/neo4j/neo4j.js";
+import neo4j from "neo4j-driver";
 
 export const uploadTransactionsCSV = async (req: Request, res: Response) => {
   try {
@@ -121,33 +122,46 @@ export const uploadTransactionsCSV = async (req: Request, res: Response) => {
 
 export const getTransactions = async (req: Request, res: Response) => {
   try {
-    const { search, flagLevel } = req.query;
-    
-    // Build Cypher query
-    let cypher = `
-      MATCH (from:BankAccount)-[tr:TRANSFERS_TO]->(to:BankAccount)
-    `;
-    
-    // Add WHERE clauses depending on filters
+    const { search, flagLevel, page = "1", limit = "20" } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const limitInt = parseInt(limit as string);
+
+    // Build WHERE clauses depending on filters
     const conditions: string[] = [];
-    const params: any = {};
-    
+    const params: any = {
+      skip: neo4j.int(skip),
+      limit: neo4j.int(limitInt)
+    };
+
     if (flagLevel && flagLevel !== 'ALL') {
-      // Case-insensitive match — handles both 'Critical' and 'CRITICAL' in DB
       conditions.push(`toUpper(tr.flagLevel) = toUpper($flagLevel)`);
       params.flagLevel = flagLevel as string;
     }
-    
+
     if (search) {
       conditions.push(`(toLower(tr.id) CONTAINS toLower($search) OR toLower(tr.description) CONTAINS toLower($search))`);
       params.search = search as string;
     }
 
-    if (conditions.length > 0) {
-      cypher += ` WHERE ${conditions.join(' AND ')}`;
+    const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+
+    // Query for total count
+    const countCypher = `
+      MATCH (from:BankAccount)-[tr:TRANSFERS_TO]->(to:BankAccount)
+      ${whereClause}
+      RETURN count(tr) AS total
+    `;
+
+    const countRecords = await runRead(countCypher, params);
+    let totalCount = countRecords[0]?.total || 0;
+    if (neo4j.isInt(totalCount)) {
+      totalCount = totalCount.toNumber();
     }
-    
-    cypher += `
+
+    // Query for paginated transactions
+    const cypher = `
+      MATCH (from:BankAccount)-[tr:TRANSFERS_TO]->(to:BankAccount)
+      ${whereClause}
       RETURN 
         from.accountNumber AS fromAccountName,
         from.id AS fromAccountId,
@@ -164,11 +178,15 @@ export const getTransactions = async (req: Request, res: Response) => {
         toUpper(tr.flagLevel) AS flagLevel,
         tr.flagReasons AS flagReasons
       ORDER BY tr.txnDate DESC
-      LIMIT 200
+      SKIP $skip
+      LIMIT $limit
     `;
 
     const records = await runRead(cypher, params);
-    res.status(200).json(records);
+    res.status(200).json({
+      transactions: records,
+      totalCount: Number(totalCount)
+    });
   } catch (error: any) {
     console.error("Error fetching transactions:", error);
     res.status(500).json({

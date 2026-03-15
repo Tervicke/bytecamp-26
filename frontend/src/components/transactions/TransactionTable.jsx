@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useAmlStore } from '../../store/aml.store';
 import DangerBadge, { rowClass } from './DangerBadge';
-import { ChevronUp, ChevronDown, Eye, GitBranch, ArrowRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, GitBranch, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const FLAG_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4 };
@@ -12,13 +12,24 @@ export default function TransactionTable({ showOnlySuspicious = false }) {
   const { flagFilter, searchQuery, openTrail, selectTransaction } = useAmlStore();
   const [sortBy, setSortBy] = useState('txnDate');
   const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data: transactions, isLoading } = useQuery({
-    queryKey: ['transactions', flagFilter, searchQuery],
-    queryFn: () => api.getTransactions({ flagLevel: showOnlySuspicious ? 'CRITICAL' : flagFilter, search: searchQuery }),
+  const { data, isLoading } = useQuery({
+    queryKey: ['transactions', flagFilter, searchQuery, page, pageSize],
+    queryFn: () => api.getTransactions({
+      flagLevel: showOnlySuspicious ? 'CRITICAL' : flagFilter,
+      search: searchQuery,
+      page,
+      limit: pageSize
+    }),
   });
 
-  const sorted = [...(transactions || [])].sort((a, b) => {
+  const transactions = data?.transactions || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const sorted = [...transactions].sort((a, b) => {
     let av = a[sortBy], bv = b[sortBy];
     if (sortBy === 'flagLevel') { av = FLAG_ORDER[a.flagLevel]; bv = FLAG_ORDER[b.flagLevel]; }
     if (sortBy === 'amount') { av = parseFloat(a.amount); bv = parseFloat(b.amount); }
@@ -40,6 +51,12 @@ export default function TransactionTable({ showOnlySuspicious = false }) {
     e.stopPropagation();
     openTrail(txn.id);
     selectTransaction(txn);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
   };
 
   return (
@@ -99,10 +116,9 @@ export default function TransactionTable({ showOnlySuspicious = false }) {
                   {/* Pulse indicator */}
                   <td className="pl-4">
                     {txn.isSuspicious && (
-                      <span className={`inline-block w-2 h-2 rounded-full ${
-                        txn.flagLevel === 'CRITICAL' ? 'bg-red-500 animate-pulse' :
-                        txn.flagLevel === 'HIGH' ? 'bg-orange-500' : 'bg-yellow-500'
-                      }`} />
+                      <span className={`inline-block w-2 h-2 rounded-full ${txn.flagLevel === 'CRITICAL' ? 'bg-red-500 animate-pulse' :
+                          txn.flagLevel === 'HIGH' ? 'bg-orange-500' : 'bg-yellow-500'
+                        }`} />
                     )}
                   </td>
                   <td className="table-cell font-mono text-xs text-indigo-400">{txn.id}</td>
@@ -126,11 +142,10 @@ export default function TransactionTable({ showOnlySuspicious = false }) {
                     &nbsp;<span className="text-xs text-gray-500">{txn.currency}</span>
                   </td>
                   <td className="table-cell">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      txn.txnType === 'cash' ? 'bg-orange-500/20 text-orange-400' :
-                      txn.txnType === 'wire' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${txn.txnType === 'cash' ? 'bg-orange-500/20 text-orange-400' :
+                        txn.txnType === 'wire' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-gray-500/20 text-gray-400'
+                      }`}>
                       {txn.txnType.toUpperCase()}
                     </span>
                   </td>
@@ -157,16 +172,67 @@ export default function TransactionTable({ showOnlySuspicious = false }) {
           </tbody>
         </table>
       </div>
-      {sorted.length > 0 && (
-        <div className="px-4 py-3 border-t border-white/5 text-xs text-gray-500">
-          Showing {sorted.length} transactions
-          {sorted.filter(t => t.isSuspicious).length > 0 && (
-            <span className="ml-2 text-red-400">
-              · {sorted.filter(t => t.isSuspicious).length} suspicious
-            </span>
+
+      {/* Pagination & Footer */}
+      <div className="px-4 py-3 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-xs text-gray-500">
+          {totalCount > 0 ? (
+            <>
+              Showing <span className="text-gray-300">{(page - 1) * pageSize + 1}</span> to <span className="text-gray-300">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-gray-300">{totalCount}</span> transactions
+              {transactions.filter(t => t.isSuspicious).length > 0 && (
+                <span className="ml-2 text-red-400">
+                  · {transactions.filter(t => t.isSuspicious).length} suspicious on this page
+                </span>
+              )}
+            </>
+          ) : (
+            'No transactions to show'
           )}
         </div>
-      )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              className="p-1.5 rounded-lg border border-white/5 bg-navy-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1 px-2">
+              {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                let pageNum;
+                if (totalPages <= 5) pageNum = i + 1;
+                else if (page <= 3) pageNum = i + 1;
+                else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
+                else pageNum = page - 2 + i;
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`min-w-[32px] h-8 text-xs font-medium rounded-lg transition-all duration-200 ${page === pageNum
+                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                        : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === totalPages}
+              className="p-1.5 rounded-lg border border-white/5 bg-navy-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
