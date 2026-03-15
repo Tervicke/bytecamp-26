@@ -1,5 +1,5 @@
 import type { Transaction } from "../types/transactions";
-import { runWrite } from "../lib/neo4j/neo4j";
+import { runRead, runWrite } from "../lib/neo4j/neo4j";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -29,16 +29,27 @@ export type ApplyRulesResult = {
 const ALL_RULES: TransactionRule[] = [
   circularTransactionRule,
   sharedOwnershipRule,
+  // rapidTransfersRule,
+  cashFlowRatioRule,
 ];
 
 // ─── Core Engine ────────────────────────────────────────────────────────
 
 export const SeverityMap: Record<number, string> = {
-  6: "Critical",
-  5: "High",
-  4: "Medium",
-  3: "Low",
-  0: "None",
+  6: "CRITICAL",
+  5: "HIGH",
+  4: "MEDIUM",
+  3: "LOW",
+  0: "NONE",
+};
+
+// Uppercase flag level map for Neo4j storage
+export const FlagLevelMap: Record<number, string> = {
+  6: "CRITICAL",
+  5: "HIGH",
+  4: "MEDIUM",
+  3: "LOW",
+  0: "NONE",
 };
 
 export async function evaluateAllTransactionRules(
@@ -63,39 +74,96 @@ export async function evaluateAllTransactionRules(
   return results;
 }
 
+
+async function flagAccountsForTransaction(txn: Transaction & {
+  isSuspicious: boolean
+  flagLevel: string
+  flagReasons: string[]
+}) {
+  if (!txn.isSuspicious) return;
+
+  const query = `
+    MATCH (a:BankAccount {id: $fromId}),
+          (b:BankAccount {id: $toId})
+          
+    // 1. Flag the immediate Bank Accounts
+    SET a.flagLevel = $flagLevel,
+        b.flagLevel = $flagLevel,
+        a.flagReasons = apoc.coll.toSet(coalesce(a.flagReasons, []) + $flagReasons),
+        b.flagReasons = apoc.coll.toSet(coalesce(b.flagReasons, []) + $flagReasons)
+
+    // 2. Propagation for "From" side (Company & Owner)
+    WITH a, b
+    OPTIONAL MATCH (ca:Company)-[:HOLDS_ACCOUNT]->(a)
+    OPTIONAL MATCH (pa:Person)-[:OWNS]->(ca)
+    SET ca.flagLevel = $flagLevel,
+        ca.flagReasons = apoc.coll.toSet(coalesce(ca.flagReasons, []) + $flagReasons),
+        pa.flagLevel = $flagLevel,
+        pa.flagReasons = apoc.coll.toSet(coalesce(pa.flagReasons, []) + $flagReasons)
+
+    // 3. Propagation for "To" side (Company & Owner)
+    WITH b
+    OPTIONAL MATCH (cb:Company)-[:HOLDS_ACCOUNT]->(b)
+    OPTIONAL MATCH (pb:Person)-[:OWNS]->(cb)
+    SET cb.flagLevel = $flagLevel,
+        cb.flagReasons = apoc.coll.toSet(coalesce(cb.flagReasons, []) + $flagReasons),
+        pb.flagLevel = $flagLevel,
+        pb.flagReasons = apoc.coll.toSet(coalesce(pb.flagReasons, []) + $flagReasons)
+  `;
+
+  await runWrite(query, {
+    fromId: txn.fromAccountId,
+    toId: txn.toAccountId,
+    flagLevel: txn.flagLevel,
+    flagReasons: txn.flagReasons
+  });
+}
+
+
 export async function applyAllRulesToTransaction(
   txn: Transaction
 ): Promise<ApplyRulesResult> {
   const ruleResults = await evaluateAllTransactionRules(txn);
 
-  let totalSeverity = 0;
-  const triggeredRules: string[] = [];
+  const triggeredRules = ruleResults.filter((r) => r.triggered);
+  const triggeredNames = triggeredRules.map((r) => r.ruleName);
 
-  for (const r of ruleResults) {
-    if (r.triggered) {
-      triggeredRules.push(r.ruleName);
-      totalSeverity += r.severity;
-    }
-  }
+  // Use MAX severity across triggered rules (compound risk = worst case)
+  const maxSeverity =
+    triggeredRules.length > 0
+      ? Math.max(...triggeredRules.map((r) => r.severity))
+      : 0;
 
-  const triggeredCount = triggeredRules.length;
-  // Calculate average severity (rounding to nearest integer in SeverityMap range)
-  const averageSeverity = triggeredCount > 0 ? Math.round(totalSeverity / triggeredCount) : 0;
-  
-  const isSuspicious = averageSeverity > 0;
-  const flagLevel = SeverityMap[averageSeverity] ?? "None";
+  const isSuspicious = maxSeverity > 0;
+  const flagLevel = FlagLevelMap[maxSeverity] ?? "NONE";
+
+  const flaggedTxn = {
+    ...txn,
+    isSuspicious,
+    flagReasons: triggeredNames,
+    severity: maxSeverity,
+    flagLevel,
+  };
+
+  // propagate risk to accounts
+  await flagAccountsForTransaction(flaggedTxn);
 
   return {
-    transaction: {
-      ...txn,
-      isSuspicious,
-      flagReasons: triggeredRules,
-      severity: averageSeverity,
-      flagLevel,
-    },
+    transaction: flaggedTxn,
     ruleResults,
   };
+
 }
+
+// ─── Severity Helpers ────────────────────────────────────────────────────
+
+const calculateSeverityFromCount = (count: number): number => {
+  if (count >= 2 && count <= 3) return 6;
+  if (count === 4) return 5;
+  if (count >= 5 && count <= 6) return 4;
+  if (count >= 7 && count <= 8) return 3;
+  return 0;
+};
 
 // ─── Circular Transaction Rule ─────────────────────────────────────────
 
@@ -113,14 +181,6 @@ export type CircularTransactionDetection = {
   transaction: Transaction;
   accountPath: string[];
   transactionPath: CircularTxnPathEdge[];
-};
-
-const calculateSeverityFromCount = (count: number): number => {
-  if (count >= 2 && count <= 3) return 6;
-  if (count === 4) return 5;
-  if (count >= 5 && count <= 6) return 4;
-  if (count >= 7 && count <= 8) return 3;
-  return 0;
 };
 
 export async function detectCircularTransaction(
@@ -246,7 +306,6 @@ export type RapidTransferDetection = {
   }[];
 };
 
-// Simple severity calculation based on number of recipients in window
 const calculateRapidTransferSeverity = (recipientCount: number): number => {
   if (recipientCount >= 10) return 6;
   if (recipientCount >= 7) return 5;
@@ -284,7 +343,7 @@ export async function detectRapidTransfers(
              size(uniqueRecipients) AS recipientCount,
              transactionsInWindow
   `;
-  
+
   return await runWrite<RapidTransferDetection>(query, {
     fromAccountId: txn.fromAccountId,
     txnDate: txn.txnDate,
@@ -304,6 +363,79 @@ export async function rapidTransfersRule(
 
   return {
     ruleName: "rapidTransfers",
+    triggered: detections.length > 0,
+    severity,
+    data: detections,
+  };
+}
+
+// ─── Cash Flow Ratio Rule ────────────────────────────────────────────────
+// Flags accounts where cash inflow > 70% or > 90% of total transaction volume
+// in a rolling 30-day window around the transaction date.
+
+export type CashFlowRatioDetection = {
+  accountId: string;
+  cashIn: number;
+  totalTxns: number;
+  ratio: number;
+};
+
+const calculateCashFlowSeverity = (ratio: number): number => {
+  if (ratio >= 0.9) return 6; // CRITICAL
+  if (ratio >= 0.7) return 5; // HIGH
+  return 0;
+};
+
+export async function detectCashFlowRatio(
+  txn: Transaction
+): Promise<CashFlowRatioDetection[]> {
+  // Check the fromAccount's rolling 30-day cash-in ratio
+  const query = `
+      MATCH (acc:BankAccount {id: $fromAccountId})
+      
+      OPTIONAL MATCH (acc)<-[tin:TRANSFERS_TO]-(src:BankAccount)
+      WHERE tin.txnDate >= $windowStart AND tin.txnDate <= $txnDate
+        AND tin.txnType = 'cash'
+      
+      OPTIONAL MATCH (acc)-[tout:TRANSFERS_TO]->(dst:BankAccount)
+      WHERE tout.txnDate >= $windowStart AND tout.txnDate <= $txnDate
+      
+      WITH acc,
+           count(DISTINCT tin) AS cashIn,
+           count(DISTINCT tout) AS totalOut
+      
+      WITH acc, cashIn, totalOut,
+           toFloat(cashIn) / CASE WHEN (cashIn + totalOut) = 0 THEN 1 ELSE (cashIn + totalOut) END AS ratio
+      
+      WHERE ratio >= 0.7
+      
+      RETURN acc.id AS accountId,
+             cashIn,
+             (cashIn + totalOut) AS totalTxns,
+             ratio
+  `;
+
+  // Window: 30 days before the current transaction date
+  const txnDate = txn.txnDate instanceof Date ? txn.txnDate : new Date(txn.txnDate);
+  const windowStart = new Date(txnDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  return await runRead<CashFlowRatioDetection>(query, {
+    fromAccountId: txn.fromAccountId,
+    txnDate: txnDate.toISOString(),
+    windowStart,
+  });
+}
+
+export async function cashFlowRatioRule(
+  txn: Transaction
+): Promise<TransactionRuleResult<CashFlowRatioDetection[]>> {
+  const detections = await detectCashFlowRatio(txn);
+
+  const severities = detections.map((d) => calculateCashFlowSeverity(d.ratio));
+  const severity = severities.length > 0 ? Math.max(...severities) : 0;
+
+  return {
+    ruleName: "cashFlowRatio",
     triggered: detections.length > 0,
     severity,
     data: detections,

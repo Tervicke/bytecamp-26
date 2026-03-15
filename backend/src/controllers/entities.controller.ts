@@ -11,13 +11,44 @@ function mapNode(record: Record<string, any>, alias: string) {
 
 // ─── Companies ───────────────────────────────────────────────────────────────
 
-export const getCompanies = async (_req: Request, res: Response): Promise<void> => {
+export const getCompanies = async (req: Request, res: Response): Promise<void> => {
   try {
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+    
+    // Defensive parsing
+    let page = parseInt(String(pageParam));
+    if (isNaN(page) || page < 1) page = 1;
+    
+    let limit = parseInt(String(limitParam));
+    if (isNaN(limit) || limit < 1) limit = 10;
+    
+    const skip = (page - 1) * limit;
+
+    console.log(`[entities] getCompanies - input: page=${pageParam}, limit=${limitParam} | parsed: page=${page}, limit=${limit}, skip=${skip}`);
+
+    const totalRecords = await runQuery<{ total: any }>(
+      `MATCH (c:Company) RETURN count(c) AS total`
+    );
+    const total = Number(totalRecords[0]?.total.low ?? totalRecords[0]?.total ?? 0);
+
     const records = await runQuery<{ c: any }>(
-      `MATCH (c:Company) RETURN c ORDER BY c.name`
+      `MATCH (c:Company) 
+       RETURN c 
+       ORDER BY c.name 
+       SKIP toInteger($skip) LIMIT toInteger($limit)`,
+      { skip, limit }
     );
     const companies = records.map(r => mapNode(r, 'c'));
-    res.json(companies);
+
+    console.log(`[entities] getCompanies result - total: ${total}, count: ${companies.length}`);
+    const response = {
+      data: companies,
+      total,
+      page,
+      limit
+    };
+    res.json(response);
   } catch (err: any) {
     console.error('[entities] getCompanies error:', err);
     res.status(500).json({ error: err.message });
@@ -64,12 +95,41 @@ export const createCompany = async (req: Request, res: Response): Promise<void> 
 
 // ─── Persons ─────────────────────────────────────────────────────────────────
 
-export const getPersons = async (_req: Request, res: Response): Promise<void> => {
+export const getPersons = async (req: Request, res: Response): Promise<void> => {
   try {
-    const records = await runQuery<{ p: any }>(
-      `MATCH (p:Person) RETURN p ORDER BY p.name`
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+    let page = parseInt(String(pageParam));
+    if (isNaN(page) || page < 1) page = 1;
+    let limit = parseInt(String(limitParam));
+    if (isNaN(limit) || limit < 1) limit = 10;
+    const skip = (page - 1) * limit;
+
+    console.log(`[entities] getPersons - input: page=${pageParam}, limit=${limitParam} | parsed: page=${page}, limit=${limit}, skip=${skip}`);
+
+    const totalRecords = await runQuery<{ total: any }>(
+      `MATCH (p:Person) RETURN count(p) AS total`
     );
-    res.json(records.map(r => mapNode(r, 'p')));
+    const total = Number(totalRecords[0]?.total.low ?? totalRecords[0]?.total ?? 0);
+
+    const records = await runQuery<{ p: any }>(
+      `MATCH (p:Person) 
+       RETURN p 
+       ORDER BY p.name 
+       SKIP toInteger($skip) LIMIT toInteger($limit)`,
+      { skip, limit }
+    );
+
+    const persons = records.map(r => mapNode(r, 'p'));
+    console.log(`[entities] getPersons - page: ${page}, limit: ${limit}, skip: ${skip}, total: ${total}, count: ${persons.length}`);
+    const response = {
+      data: persons,
+      total,
+      page,
+      limit
+    };
+    console.log('[entities] getPersons response keys:', Object.keys(response));
+    res.json(response);
   } catch (err: any) {
     console.error('[entities] getPersons error:', err);
     res.status(500).json({ error: err.message });
@@ -114,8 +174,23 @@ export const createPerson = async (req: Request, res: Response): Promise<void> =
 
 // ─── Bank Accounts ────────────────────────────────────────────────────────────
 
-export const getBankAccounts = async (_req: Request, res: Response): Promise<void> => {
+export const getBankAccounts = async (req: Request, res: Response): Promise<void> => {
   try {
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+    let page = parseInt(String(pageParam));
+    if (isNaN(page) || page < 1) page = 1;
+    let limit = parseInt(String(limitParam));
+    if (isNaN(limit) || limit < 1) limit = 10;
+    const skip = (page - 1) * limit;
+
+    console.log(`[entities] getBankAccounts - input: page=${pageParam}, limit=${limitParam} | parsed: page=${page}, limit=${limit}, skip=${skip}`);
+
+    const totalRecords = await runQuery<{ total: any }>(
+      `MATCH (b:BankAccount) RETURN count(b) AS total`
+    );
+    const total = Number(totalRecords[0]?.total.low ?? totalRecords[0]?.total ?? 0);
+
     // Also compute 30-day transaction count and cash-flow ratio per account
     const records = await runQuery<{ b: any; txnCount: any; cashIn: any; cashOut: any }>(
       `MATCH (b:BankAccount)
@@ -131,7 +206,9 @@ export const getBankAccounts = async (_req: Request, res: Response): Promise<voi
               CASE WHEN txnCount + cashIn = 0 THEN 0.0
                    ELSE toFloat(cashIn) / toFloat(txnCount + cashIn)
               END AS cashFlowRatio
-       ORDER BY b.accountNumber`
+       ORDER BY b.accountNumber
+       SKIP toInteger($skip) LIMIT toInteger($limit)`,
+      { skip, limit }
     );
 
     const accounts = records.map(r => {
@@ -143,7 +220,15 @@ export const getBankAccounts = async (_req: Request, res: Response): Promise<voi
       };
     });
 
-    res.json(accounts);
+    console.log(`[entities] getBankAccounts - page: ${page}, limit: ${limit}, skip: ${skip}, total: ${total}, count: ${accounts.length}`);
+    const response = {
+      data: accounts,
+      total,
+      page,
+      limit
+    };
+    console.log('[entities] getBankAccounts response keys:', Object.keys(response));
+    res.json(response);
   } catch (err: any) {
     console.error('[entities] getBankAccounts error:', err);
     res.status(500).json({ error: err.message });

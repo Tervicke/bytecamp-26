@@ -8,8 +8,10 @@ const FLAG_CONFIG = {
 
 export default function DangerBadge({ level, size = 'sm' }) {
   const config = FLAG_CONFIG[level] || FLAG_CONFIG.NONE;
+  const sizeClass = size === 'xs' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]';
+  
   return (
-    <span className={config.className}>
+    <span className={`${config.className} ${sizeClass} font-bold rounded-full uppercase tracking-wider`}>
       {config.label}
     </span>
   );

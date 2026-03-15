@@ -6,12 +6,14 @@ import {
   getDashboardStats,
   getVolumeChart,
   runAnalysis,
+  searchEntities,
 } from '../controllers/flags.controller.js';
 
 // ─── /api/flags ───────────────────────────────────────────────────────────────
 const flagsRouter = Router();
 flagsRouter.use(verifyToken);
 flagsRouter.get('/', getFlags);
+flagsRouter.get('/search', searchEntities);
 flagsRouter.post('/override', overrideFlagLevel);
 
 // ─── /api/dashboard ───────────────────────────────────────────────────────────
