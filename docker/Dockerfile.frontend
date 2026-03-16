@@ -1,4 +1,4 @@
-FROM oven/bun:1.2.21-alpine AS base
+FROM oven/bun:1.2.21-alpine
 WORKDIR /var/www/bytecamp-web
 
 COPY ./frontend/package.json ./package.json
@@ -14,4 +14,4 @@ RUN bun run build
 WORKDIR /var/www/bytecamp-web
 EXPOSE 5173
 
-CMD ["bun", "start"]
+CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "5173"]

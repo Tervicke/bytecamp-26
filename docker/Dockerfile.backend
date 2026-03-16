@@ -1,4 +1,4 @@
-FROM oven/bun:1.2.21-alpin
+FROM oven/bun:1.2.21-alpine
 WORKDIR /var/www/bytecamp-server
 
 COPY ./backend/package.json ./package.json
