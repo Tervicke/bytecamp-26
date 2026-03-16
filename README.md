@@ -142,4 +142,3 @@ To stop the containers, use `Ctrl+C` or run:
 ```bash
 docker compose down
 ```
-# bytecamp-26
